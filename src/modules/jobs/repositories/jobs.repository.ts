@@ -1,6 +1,6 @@
-import { prisma } from "../../../config/database";
-import { JobStatus, JobType, Prisma } from "@prisma/client";
-import { jobEventBus } from "../../../shared/events/job-event-bus";
+import { prisma } from '../../../config/database';
+import { JobStatus, JobType, Prisma } from '@prisma/client';
+import { jobEventBus } from '../../../shared/events/job-event-bus';
 
 export class JobsRepository {
   async create(data: {
@@ -15,10 +15,7 @@ export class JobsRepository {
         type: data.type,
         status: JobStatus.PENDING,
         inputFileId: data.inputFileId,
-        filters:
-          data.filters !== undefined
-            ? (data.filters as Prisma.InputJsonValue)
-            : undefined,
+        filters: data.filters !== undefined ? (data.filters as Prisma.InputJsonValue) : undefined,
       },
     });
   }
@@ -35,7 +32,7 @@ export class JobsRepository {
     const [jobs, total] = await Promise.all([
       prisma.job.findMany({
         where: { userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include: { inputFile: true, outputFile: true },
@@ -66,13 +63,10 @@ export class JobsRepository {
         ...rest,
         ...(errorLog !== undefined
           ? {
-              errorLog:
-                errorLog as import("@prisma/client").Prisma.InputJsonValue,
+              errorLog: errorLog as import('@prisma/client').Prisma.InputJsonValue,
             }
           : {}),
-        ...(outputFileId !== undefined
-          ? { outputFile: { connect: { id: outputFileId } } }
-          : {}),
+        ...(outputFileId !== undefined ? { outputFile: { connect: { id: outputFileId } } } : {}),
       },
     });
     jobEventBus.emitProgress({

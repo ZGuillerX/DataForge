@@ -484,6 +484,7 @@ Un worker BullMQ bloqueante en el mismo proceso que Express degradaría el tiemp
 `xlsx` tenía una vulnerabilidad de prototype pollution (alta severidad). ExcelJS es más grande pero activamente mantenido y sin ese vector conocido.
 
 **Límites que no fueron validados:**
+
 - Volumen real: no hay benchmarks con archivos de cientos de miles de filas en este entorno
 - Múltiples workers simultáneos no fueron probados bajo concurrencia
 - La estrategia fuzzy (Fuse.js) puede ser lenta con datasets grandes — no se evaluó la complejidad O(n²)
@@ -520,7 +521,6 @@ Un worker BullMQ bloqueante en el mismo proceso que Express degradaría el tiemp
 - Pipelines tipo ETL para limpieza de datos
 - Dashboards de administración con operaciones bulk asíncronas
 - Herramientas de calidad de datos
-
 
 ---
 

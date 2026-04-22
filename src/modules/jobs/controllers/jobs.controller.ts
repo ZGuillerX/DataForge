@@ -1,40 +1,31 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../../../shared/types/request.type";
-import { JobsService } from "../services/jobs.service";
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../../../shared/types/request.type';
+import { JobsService } from '../services/jobs.service';
 import {
   CreateImportJobSchema,
   CreateExportJobSchema,
   CreateDedupJobSchema,
-} from "../dto/create-job.dto";
-import { RecordsRepository } from "../../records/repositories/records.repository";
-import { jobEventBus } from "../../../shared/events/job-event-bus";
+} from '../dto/create-job.dto';
+import { RecordsRepository } from '../../records/repositories/records.repository';
+import { jobEventBus } from '../../../shared/events/job-event-bus';
 
 const jobsService = new JobsService();
 const recordsRepo = new RecordsRepository();
 
 export class JobsController {
-  async createImportJob(
-    req: AuthenticatedRequest,
-    res: Response,
-  ): Promise<void> {
+  async createImportJob(req: AuthenticatedRequest, res: Response): Promise<void> {
     const dto = CreateImportJobSchema.parse(req.body);
     const job = await jobsService.createImportJob(req.user.sub, dto);
     res.status(202).json({ success: true, data: job });
   }
 
-  async createExportJob(
-    req: AuthenticatedRequest,
-    res: Response,
-  ): Promise<void> {
+  async createExportJob(req: AuthenticatedRequest, res: Response): Promise<void> {
     const dto = CreateExportJobSchema.parse(req.body);
     const job = await jobsService.createExportJob(req.user.sub, dto);
     res.status(202).json({ success: true, data: job });
   }
 
-  async createDedupJob(
-    req: AuthenticatedRequest,
-    res: Response,
-  ): Promise<void> {
+  async createDedupJob(req: AuthenticatedRequest, res: Response): Promise<void> {
     const dto = CreateDedupJobSchema.parse(req.body);
     const job = await jobsService.createDedupJob(req.user.sub, dto);
     res.status(202).json({ success: true, data: job });
@@ -68,19 +59,16 @@ export class JobsController {
     });
   }
 
-  async streamJobEvents(
-    req: AuthenticatedRequest,
-    res: Response,
-  ): Promise<void> {
+  async streamJobEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
     const jobId = req.params.id;
 
     // Verifica ownership antes de abrir el stream
     await jobsService.getJob(jobId, req.user.sub);
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no"); // compatibilidad con nginx
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // compatibilidad con nginx
     res.flushHeaders();
 
     const send = (data: object) => {
@@ -88,16 +76,16 @@ export class JobsController {
     };
 
     // Envía ping inicial para confirmar conexión
-    send({ type: "connected", jobId });
+    send({ type: 'connected', jobId });
 
     const onProgress = (event: object) => {
-      send({ type: "progress", ...event });
+      send({ type: 'progress', ...event });
     };
 
     jobEventBus.onProgress(jobId, onProgress);
 
     // Limpia al desconectar el cliente
-    req.on("close", () => {
+    req.on('close', () => {
       jobEventBus.offProgress(jobId, onProgress);
     });
   }
