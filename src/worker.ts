@@ -1,5 +1,5 @@
 import "dotenv/config";
-import "../src/config/storage"; // inicializa directorios
+import "./config/storage"; // inicializa directorios
 import { createJobsWorker } from "./modules/jobs/workers/jobs.worker";
 import { connectDatabase } from "./config/database";
 import { logger } from "./shared/utils/logger.util";
