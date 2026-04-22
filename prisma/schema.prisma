@@ -38,6 +38,8 @@ model File {
   inputJobs  Job[] @relation("JobInputFile")
   outputJobs Job[] @relation("JobOutputFile")
 
+  @@index([userId])
+  @@index([userId, type])
   @@map("files")
 }
 
@@ -63,6 +65,9 @@ model Job {
   outputFile File?   @relation("JobOutputFile", fields: [outputFileId], references: [id])
   records    Record[]
 
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, type])
   @@map("jobs")
 }
 
