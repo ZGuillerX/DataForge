@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  files File[]
+  jobs  Job[]
+
+  @@map("users")
+}
+
+model File {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  filename  String
+  path      String
+  size      Int
+  mimeType  String   @map("mime_type")
+  type      FileType
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputJobs  Job[] @relation("JobInputFile")
+  outputJobs Job[] @relation("JobOutputFile")
+
+  @@map("files")
+}
+
+model Job {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  type          JobType
+  status        JobStatus @default(PENDING)
+  inputFileId   String?   @map("input_file_id")
+  outputFileId  String?   @map("output_file_id")
+  totalRows     Int       @default(0) @map("total_rows")
+  processedRows Int       @default(0) @map("processed_rows")
+  failedRows    Int       @default(0) @map("failed_rows")
+  errorLog      Json?     @map("error_log")
+  filters       Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputFile  File?   @relation("JobInputFile", fields: [inputFileId], references: [id])
+  outputFile File?   @relation("JobOutputFile", fields: [outputFileId], references: [id])
+  records    Record[]
+
+  @@map("jobs")
+}
+
+model Record {
+  id           String   @id @default(uuid())
+  jobId        String   @map("job_id")
+  rowIndex     Int      @map("row_index")
+  data         Json
+  isValid      Boolean  @default(true) @map("is_valid")
+  errorMessage String?  @map("error_message")
+  isDuplicate  Boolean  @default(false) @map("is_duplicate")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  job        Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  duplicates Duplicate[] @relation("OriginalRecord")
+  duplicateOf Duplicate[] @relation("DuplicateRecord")
+
+  @@index([jobId])
+  @@index([isDuplicate])
+  @@map("records")
+}
+
+model Duplicate {
+  id             String @id @default(uuid())
+  recordId       String @map("record_id")
+  duplicateOfId  String @map("duplicate_of_id")
+  ruleTriggered  String @map("rule_triggered")
+  score          Float  @default(1.0)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  record      Record @relation("DuplicateRecord", fields: [recordId], references: [id], onDelete: Cascade)
+  originalRecord Record @relation("OriginalRecord", fields: [duplicateOfId], references: [id], onDelete: Cascade)
+
+  @@map("duplicates")
+}
+
+enum FileType {
+  IMPORT
+  EXPORT
+}
+
+enum JobType {
+  IMPORT
+  EXPORT
+  DEDUP
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
