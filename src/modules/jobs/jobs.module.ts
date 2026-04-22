@@ -28,5 +28,10 @@ router.get("/:id/results", (req, res, next) =>
     .getJobResults(req as unknown as AuthenticatedRequest, res)
     .catch(next),
 );
+router.get("/:id/events", (req, res, next) =>
+  controller
+    .streamJobEvents(req as unknown as AuthenticatedRequest, res)
+    .catch(next),
+);
 
 export { router as jobsRouter };

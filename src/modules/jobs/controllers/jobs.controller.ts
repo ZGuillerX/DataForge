@@ -7,6 +7,7 @@ import {
   CreateDedupJobSchema,
 } from "../dto/create-job.dto";
 import { RecordsRepository } from "../../records/repositories/records.repository";
+import { jobEventBus } from "../../../shared/events/job-event-bus";
 
 const jobsService = new JobsService();
 const recordsRepo = new RecordsRepository();
@@ -64,6 +65,40 @@ export class JobsController {
       success: true,
       data: result.records,
       meta: { total: result.total, page, limit },
+    });
+  }
+
+  async streamJobEvents(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    const jobId = req.params.id;
+
+    // Verifica ownership antes de abrir el stream
+    await jobsService.getJob(jobId, req.user.sub);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // compatibilidad con nginx
+    res.flushHeaders();
+
+    const send = (data: object) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Envía ping inicial para confirmar conexión
+    send({ type: "connected", jobId });
+
+    const onProgress = (event: object) => {
+      send({ type: "progress", ...event });
+    };
+
+    jobEventBus.onProgress(jobId, onProgress);
+
+    // Limpia al desconectar el cliente
+    req.on("close", () => {
+      jobEventBus.offProgress(jobId, onProgress);
     });
   }
 }

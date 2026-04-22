@@ -1,5 +1,6 @@
 import { prisma } from "../../../config/database";
 import { JobStatus, JobType, Prisma } from "@prisma/client";
+import { jobEventBus } from "../../../shared/events/job-event-bus";
 
 export class JobsRepository {
   async create(data: {
@@ -58,7 +59,7 @@ export class JobsRepository {
     },
   ) {
     const { errorLog, outputFileId, ...rest } = extra ?? {};
-    return prisma.job.update({
+    const job = await prisma.job.update({
       where: { id },
       data: {
         status,
@@ -74,15 +75,31 @@ export class JobsRepository {
           : {}),
       },
     });
+    jobEventBus.emitProgress({
+      jobId: id,
+      status: job.status,
+      processedRows: job.processedRows,
+      failedRows: job.failedRows,
+      totalRows: job.totalRows,
+    });
+    return job;
   }
 
   async incrementProgress(id: string, processed: number, failed: number) {
-    return prisma.job.update({
+    const job = await prisma.job.update({
       where: { id },
       data: {
         processedRows: { increment: processed },
         failedRows: { increment: failed },
       },
     });
+    jobEventBus.emitProgress({
+      jobId: id,
+      status: job.status,
+      processedRows: job.processedRows,
+      failedRows: job.failedRows,
+      totalRows: job.totalRows,
+    });
+    return job;
   }
 }
