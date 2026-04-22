@@ -22,9 +22,15 @@ RUN apk add --no-cache openssl
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Copiar CLI de prisma desde el builder para regenerar binarios en el entorno correcto
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma/
+
+# Generar cliente Prisma compilado para este entorno (alpine + openssl)
+RUN npx prisma generate
 
 RUN mkdir -p uploads/exports logs
 
