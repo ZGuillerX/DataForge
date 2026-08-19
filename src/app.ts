@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
 
 import { loggerMiddleware } from "./shared/middleware/logger.middleware";
 import { errorMiddleware } from "./shared/middleware/error.middleware";
@@ -11,6 +12,7 @@ import { authRouter } from "./modules/auth/auth.module";
 import { usersRouter } from "./modules/users/users.module";
 import { filesRouter } from "./modules/files/files.module";
 import { jobsRouter } from "./modules/jobs/jobs.module";
+import { openapiSpec } from "./config/openapi";
 
 export function createApp() {
   const app = express();
@@ -52,6 +54,9 @@ export function createApp() {
       service: "DataForge",
     });
   });
+
+  // Documentación OpenAPI
+  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
   // Rutas
   app.use("/api/v1/auth", authRouter);
