@@ -12,7 +12,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-outline-variant bg-surface-container p-md">
       <div className="mb-6 flex flex-col items-start gap-1 px-1 pt-1">
-        <img src="/dataforge_logo.png" alt="DataForge" className="h-16 w-auto" />
+        <img src="/dataforge_logo.png" alt="DataForge" className="h-[83px] w-auto" />
         <p className="text-label-caps font-label-caps tracking-wide text-on-surface-variant">
           Data Engineering
         </p>

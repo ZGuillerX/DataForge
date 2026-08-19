@@ -40,7 +40,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-background p-md">
       <div className="w-full max-w-[24rem] rounded-xl border border-outline-variant bg-surface-container p-lg">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <img src="/dataforge_logo.png" alt="DataForge" className="h-20 w-auto" />
+          <img src="/dataforge_logo.png" alt="DataForge" className="h-[104px] w-auto" />
           <p className="text-body-sm font-body-sm text-on-surface-variant">
             Plataforma de pipelines de datos
           </p>
