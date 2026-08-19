@@ -7,6 +7,7 @@ import { RecordsRepository } from '../../records/repositories/records.repository
 import { processInChunks } from '../../../shared/utils/chunk.util';
 import { createJobLogger } from '../../../shared/utils/logger.util';
 import { CHUNK_SIZE } from '../../../shared/constants/job.constants';
+import { env } from '../../../config/env';
 import { JobStatus } from '@prisma/client';
 
 const jobsRepo = new JobsRepository();
@@ -38,7 +39,7 @@ function validateRow(row: RawRow): { isValid: boolean; errorMessage?: string } {
   for (const field of phoneFields) {
     const val = row[field];
     if (val !== undefined && val !== null && val !== '') {
-      const normalized = String(val).replace(/[\s\-\(\)\+\.]/g, '');
+      const normalized = String(val).replace(/[\s\-()+.]/g, '');
       if (!/^\d+$/.test(normalized) || normalized.length < 7) {
         return {
           isValid: false,
@@ -118,6 +119,11 @@ export async function runImportProcessor(jobId: string, fileId: string): Promise
     }
 
     const totalRows = rows.length;
+    if (totalRows > env.MAX_ROWS_PER_JOB) {
+      throw new Error(
+        `File has ${totalRows} rows, which exceeds the MAX_ROWS_PER_JOB limit of ${env.MAX_ROWS_PER_JOB}`,
+      );
+    }
     await jobsRepo.updateStatus(jobId, JobStatus.RUNNING, { totalRows });
     log.info(`Parsed ${totalRows} rows`);
 
