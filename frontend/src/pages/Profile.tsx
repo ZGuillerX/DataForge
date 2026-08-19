@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { usersApi } from '../api/users.api';
 import { useAuth } from '../context/AuthContext';
-import '../styles/dashboard.css';
+import Icon from '../components/Icon';
 
 export default function Profile() {
   const { updateUser } = useAuth();
@@ -49,35 +49,48 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="empty-state">
+      <div className="flex flex-col items-center gap-2 py-24 text-on-surface-variant">
         <div>Cargando…</div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">Perfil</h2>
-          <p className="page-subtitle">Tu informacion de cuenta</p>
-        </div>
+    <>
+      <div>
+        <h2 className="text-headline-md font-headline-md text-on-surface">Perfil</h2>
+        <p className="mt-1 text-body-sm font-body-sm text-on-surface-variant">
+          Tu información de cuenta.
+        </p>
       </div>
 
-      <div className="card" style={{ maxWidth: 480 }}>
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-        >
-          <div className="form-group">
-            <label className="form-label">Correo electronico</label>
-            <input className="form-input" type="email" value={email} disabled />
+      <div className="max-w-md rounded-xl border border-outline-variant bg-surface-container p-md">
+        <div className="mb-5 flex items-center gap-3 border-b border-outline-variant pb-4">
+          <Icon name="person" className="text-primary" size={24} />
+          <h3 className="text-headline-sm font-headline-sm font-semibold text-on-surface">
+            Datos de la cuenta
+          </h3>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Correo electrónico
+            </label>
+            <input
+              className="rounded border border-outline-variant bg-surface-container-low px-3 py-2 text-body-sm font-body-sm text-on-surface-variant"
+              type="email"
+              value={email}
+              disabled
+            />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Nombre completo</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Nombre completo
+            </label>
             <input
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -87,18 +100,22 @@ export default function Profile() {
           </div>
 
           {createdAt && (
-            <div className="text-muted" style={{ fontSize: 12 }}>
+            <div className="text-body-sm font-body-sm text-on-surface-variant">
               Miembro desde {new Date(createdAt).toLocaleDateString()}
             </div>
           )}
 
-          {message && <div style={{ fontSize: 13 }}>{message}</div>}
+          {message && <div className="text-body-sm font-body-sm text-on-surface">{message}</div>}
 
-          <button className="btn btn-primary" type="submit" disabled={saving}>
+          <button
+            className="rounded bg-primary py-2.5 text-body-md font-body-md font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+            type="submit"
+            disabled={saving}
+          >
             {saving ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </form>
       </div>
-    </div>
+    </>
   );
 }

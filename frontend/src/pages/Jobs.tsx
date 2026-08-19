@@ -3,7 +3,7 @@ import { jobsApi } from '../api/jobs.api';
 import { filesApi, type UploadedFile } from '../api/files.api';
 import type { Job } from '../types/job';
 import JobCard from '../components/JobCard';
-import '../styles/dashboard.css';
+import Icon from '../components/Icon';
 
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -12,6 +12,8 @@ function extractErrorMessage(err: unknown): string {
   return 'Ocurrió un error inesperado';
 }
 
+type Panel = 'import' | 'dedup' | 'export' | null;
+
 export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
@@ -19,9 +21,7 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [importJobs, setImportJobs] = useState<Job[]>([]);
-  const [showImport, setShowImport] = useState(false);
-  const [showDedup, setShowDedup] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  const [panel, setPanel] = useState<Panel>(null);
   const [selectedFileId, setSelectedFileId] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
@@ -64,28 +64,14 @@ export default function Jobs() {
     }
   };
 
-  const handleShowImport = () => {
-    loadFiles();
-    setShowImport(true);
-    setShowDedup(false);
-    setShowExport(false);
+  const openPanel = (next: Panel) => {
+    setPanel(next);
     setError('');
-  };
-
-  const handleShowDedup = () => {
-    loadImportJobs();
-    setShowDedup(true);
-    setShowImport(false);
-    setShowExport(false);
-    setSelectedJobId('');
-    setError('');
-  };
-
-  const handleShowExport = () => {
-    setShowExport(true);
-    setShowImport(false);
-    setShowDedup(false);
-    setError('');
+    if (next === 'import') loadFiles();
+    if (next === 'dedup') {
+      setSelectedJobId('');
+      loadImportJobs();
+    }
   };
 
   const createImport = async () => {
@@ -97,7 +83,7 @@ export default function Jobs() {
     setError('');
     try {
       await jobsApi.createImport(selectedFileId);
-      setShowImport(false);
+      setPanel(null);
       setPage(1);
       loadJobs(1);
     } catch (err: unknown) {
@@ -116,7 +102,7 @@ export default function Jobs() {
     setError('');
     try {
       await jobsApi.createDedup(selectedJobId);
-      setShowDedup(false);
+      setPanel(null);
       setPage(1);
       loadJobs(1);
     } catch (err: unknown) {
@@ -131,7 +117,7 @@ export default function Jobs() {
     setError('');
     try {
       await jobsApi.createExport(exportFormat);
-      setShowExport(false);
+      setPanel(null);
       setPage(1);
       loadJobs(1);
     } catch (err: unknown) {
@@ -144,35 +130,50 @@ export default function Jobs() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div>
-      <div className="page-header">
+    <>
+      <div className="flex items-end justify-between">
         <div>
-          <h2 className="page-title">Trabajos</h2>
-          <p className="page-subtitle">{total} trabajos en total</p>
+          <h2 className="text-headline-md font-headline-md text-on-surface">Trabajos</h2>
+          <p className="mt-1 text-body-sm font-body-sm text-on-surface-variant">
+            {total} trabajos en total
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={handleShowImport}>
-            📥 Importar
+        <div className="flex gap-2">
+          <button
+            className="flex items-center gap-2 rounded border border-outline-variant px-3 py-1.5 text-body-sm font-body-sm text-on-surface transition-colors hover:border-primary hover:text-primary"
+            onClick={() => openPanel('import')}
+          >
+            <Icon name="upload" size={16} />
+            Importar
           </button>
-          <button className="btn btn-ghost" onClick={handleShowDedup}>
-            🔍 Deduplicar
+          <button
+            className="flex items-center gap-2 rounded border border-outline-variant px-3 py-1.5 text-body-sm font-body-sm text-on-surface transition-colors hover:border-primary hover:text-primary"
+            onClick={() => openPanel('dedup')}
+          >
+            <Icon name="content_copy" size={16} />
+            Deduplicar
           </button>
-          <button className="btn btn-ghost" onClick={handleShowExport}>
-            📤 Exportar
+          <button
+            className="flex items-center gap-2 rounded border border-outline-variant px-3 py-1.5 text-body-sm font-body-sm text-on-surface transition-colors hover:border-primary hover:text-primary"
+            onClick={() => openPanel('export')}
+          >
+            <Icon name="download" size={16} />
+            Exportar
           </button>
         </div>
       </div>
 
-      {/* Import panel */}
-      {showImport && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="section-title" style={{ marginBottom: 12 }}>
+      {panel === 'import' && (
+        <div className="rounded-xl border border-outline-variant bg-surface-container p-md">
+          <div className="mb-3 text-headline-sm font-headline-sm font-medium text-on-surface">
             Crear trabajo de importación
           </div>
-          <div className="form-group" style={{ marginBottom: 12 }}>
-            <label className="form-label">Seleccionar archivo</label>
+          <div className="mb-3 flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Seleccionar archivo
+            </label>
             <select
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
               value={selectedFileId}
               onChange={(e) => setSelectedFileId(e.target.value)}
             >
@@ -185,31 +186,39 @@ export default function Jobs() {
             </select>
           </div>
           {error && (
-            <div className="auth-error" style={{ marginBottom: 12 }}>
+            <div className="mb-3 rounded border border-error/30 bg-error/10 px-3 py-2 text-body-sm font-body-sm text-error">
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={createImport} disabled={creating}>
+          <div className="flex gap-2">
+            <button
+              className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+              onClick={createImport}
+              disabled={creating}
+            >
               {creating ? 'Creando…' : 'Iniciar importación'}
             </button>
-            <button className="btn btn-ghost" onClick={() => setShowImport(false)}>
+            <button
+              className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
+              onClick={() => setPanel(null)}
+            >
               Cancelar
             </button>
           </div>
         </div>
       )}
 
-      {/* Dedup panel */}
-      {showDedup && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="section-title" style={{ marginBottom: 12 }}>
+      {panel === 'dedup' && (
+        <div className="rounded-xl border border-outline-variant bg-surface-container p-md">
+          <div className="mb-3 text-headline-sm font-headline-sm font-medium text-on-surface">
             Crear trabajo de deduplicación
           </div>
-          <div className="form-group" style={{ marginBottom: 12 }}>
-            <label className="form-label">Trabajo de importación origen</label>
+          <div className="mb-3 flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Trabajo de importación origen
+            </label>
             <select
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
             >
@@ -222,37 +231,45 @@ export default function Jobs() {
               ))}
             </select>
             {importJobs.length === 0 && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+              <p className="text-body-sm font-body-sm text-on-surface-variant">
                 No hay trabajos de importación completados aún.
               </p>
             )}
           </div>
           {error && (
-            <div className="auth-error" style={{ marginBottom: 12 }}>
+            <div className="mb-3 rounded border border-error/30 bg-error/10 px-3 py-2 text-body-sm font-body-sm text-error">
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={createDedup} disabled={creating}>
+          <div className="flex gap-2">
+            <button
+              className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+              onClick={createDedup}
+              disabled={creating}
+            >
               {creating ? 'Creando…' : 'Iniciar deduplicación'}
             </button>
-            <button className="btn btn-ghost" onClick={() => setShowDedup(false)}>
+            <button
+              className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
+              onClick={() => setPanel(null)}
+            >
               Cancelar
             </button>
           </div>
         </div>
       )}
 
-      {/* Export panel */}
-      {showExport && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="section-title" style={{ marginBottom: 12 }}>
+      {panel === 'export' && (
+        <div className="rounded-xl border border-outline-variant bg-surface-container p-md">
+          <div className="mb-3 text-headline-sm font-headline-sm font-medium text-on-surface">
             Crear trabajo de exportación
           </div>
-          <div className="form-group" style={{ marginBottom: 12 }}>
-            <label className="form-label">Formato</label>
+          <div className="mb-3 flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Formato
+            </label>
             <select
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as 'csv' | 'json')}
             >
@@ -261,15 +278,22 @@ export default function Jobs() {
             </select>
           </div>
           {error && (
-            <div className="auth-error" style={{ marginBottom: 12 }}>
+            <div className="mb-3 rounded border border-error/30 bg-error/10 px-3 py-2 text-body-sm font-body-sm text-error">
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={createExport} disabled={creating}>
+          <div className="flex gap-2">
+            <button
+              className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+              onClick={createExport}
+              disabled={creating}
+            >
               {creating ? 'Creando…' : 'Iniciar exportación'}
             </button>
-            <button className="btn btn-ghost" onClick={() => setShowExport(false)}>
+            <button
+              className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
+              onClick={() => setPanel(null)}
+            >
               Cancelar
             </button>
           </div>
@@ -277,35 +301,35 @@ export default function Jobs() {
       )}
 
       {loading ? (
-        <div className="empty-state">
+        <div className="flex flex-col items-center gap-2 py-16 text-on-surface-variant">
           <div>Cargando…</div>
         </div>
       ) : jobs.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">⚙️</div>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-outline-variant py-16 text-on-surface-variant">
+          <Icon name="terminal" size={32} />
           <div>Sin trabajos aún — crea uno arriba</div>
         </div>
       ) : (
         <>
-          <div className="jobs-list">
+          <div className="flex flex-col gap-2">
             {jobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
           </div>
           {totalPages > 1 && (
-            <div className="pagination">
+            <div className="flex items-center justify-center gap-3">
               <button
-                className="page-btn"
+                className="rounded border border-outline-variant px-3 py-1 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
                 ← Anterior
               </button>
-              <span className="text-muted" style={{ fontSize: 13 }}>
+              <span className="text-body-sm font-body-sm text-on-surface-variant">
                 Página {page} de {totalPages}
               </span>
               <button
-                className="page-btn"
+                className="rounded border border-outline-variant px-3 py-1 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -315,6 +339,6 @@ export default function Jobs() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

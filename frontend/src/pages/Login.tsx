@@ -2,8 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 import { useAuth } from '../context/AuthContext';
-import '../styles/auth.css';
-import '../styles/global.css';
 
 type Tab = 'login' | 'register';
 
@@ -39,37 +37,48 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <div className="auth-logo-icon">⚡</div>
-          <div className="auth-logo-name">
-            Data<span>Forge</span>
-          </div>
-          <div className="auth-tagline">Plataforma de pipelines de datos</div>
+    <div className="flex min-h-screen items-center justify-center bg-background p-md">
+      <div className="w-full max-w-sm rounded-xl border border-outline-variant bg-surface-container p-lg">
+        <div className="mb-8 flex flex-col items-center gap-2 text-center">
+          <img src="/dataforge_logo.png" alt="DataForge" className="h-10 w-auto" />
+          <p className="text-body-sm font-body-sm text-on-surface-variant">
+            Plataforma de pipelines de datos
+          </p>
         </div>
 
-        <div className="auth-tabs">
+        <div className="mb-6 flex rounded-lg border border-outline-variant bg-background p-1">
           <button
-            className={`auth-tab${tab === 'login' ? ' active' : ''}`}
+            className={`flex-1 rounded py-1.5 text-body-sm font-body-sm font-medium transition-colors ${
+              tab === 'login'
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
             onClick={() => setTab('login')}
+            type="button"
           >
             Iniciar sesión
           </button>
           <button
-            className={`auth-tab${tab === 'register' ? ' active' : ''}`}
+            className={`flex-1 rounded py-1.5 text-body-sm font-body-sm font-medium transition-colors ${
+              tab === 'register'
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
             onClick={() => setTab('register')}
+            type="button"
           >
             Registrarse
           </button>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {tab === 'register' && (
-            <div className="form-group">
-              <label className="form-label">Nombre completo</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-label-caps font-label-caps text-on-surface-variant">
+                Nombre completo
+              </label>
               <input
-                className="form-input"
+                className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
                 type="text"
                 placeholder="Juan García"
                 value={name}
@@ -78,10 +87,12 @@ export default function Login() {
               />
             </div>
           )}
-          <div className="form-group">
-            <label className="form-label">Correo electrónico</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Correo electrónico
+            </label>
             <input
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
               type="email"
               placeholder="tu@empresa.com"
               value={email}
@@ -89,10 +100,12 @@ export default function Login() {
               required
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Contraseña</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Contraseña
+            </label>
             <input
-              className="form-input"
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
               type="password"
               placeholder="••••••••"
               value={password}
@@ -101,9 +114,17 @@ export default function Login() {
             />
           </div>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && (
+            <div className="rounded border border-error/30 bg-error/10 px-3 py-2 text-body-sm font-body-sm text-error">
+              {error}
+            </div>
+          )}
 
-          <button className="btn btn-primary auth-submit" type="submit" disabled={loading}>
+          <button
+            className="mt-2 rounded bg-primary py-2.5 text-body-md font-body-md font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Cargando…' : tab === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
           </button>
         </form>

@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { filesApi, type UploadedFile } from '../api/files.api';
 import { jobsApi } from '../api/jobs.api';
 import FileUploader from '../components/FileUploader';
-import '../styles/dashboard.css';
-import '../styles/auth.css';
+import Icon from '../components/Icon';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -66,112 +65,146 @@ export default function Files() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h2 className="page-title">Archivos</h2>
-          <p className="page-subtitle">{total} archivos subidos</p>
-        </div>
+    <>
+      <div>
+        <h2 className="text-headline-md font-headline-md text-on-surface">
+          Gestión de archivos
+        </h2>
+        <p className="mt-1 text-body-sm font-body-sm text-on-surface-variant">
+          Sube, importa y administra tus datasets.
+        </p>
       </div>
 
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="section-title" style={{ marginBottom: 16 }}>
+      <div className="rounded-xl border border-outline-variant bg-surface-container p-md">
+        <div className="mb-4 flex items-center gap-2 text-label-caps font-label-caps text-on-surface-variant">
+          <Icon name="upload_file" size={16} />
           Subir nuevo archivo
         </div>
         <FileUploader onUploaded={handleUploaded} />
         {message && (
-          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-secondary)' }}>
-            {message}
-          </div>
+          <div className="mt-3 text-body-sm font-body-sm text-on-surface-variant">{message}</div>
         )}
       </div>
 
-      {loading ? (
-        <div className="empty-state">
-          <div>Cargando…</div>
+      <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container">
+        <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container-low p-4">
+          <h3 className="text-headline-sm font-headline-sm font-medium text-on-surface">
+            Historial de subidas
+          </h3>
+          <span className="text-code-md font-code-md text-on-surface-variant">
+            {total} archivo{total === 1 ? '' : 's'}
+          </span>
         </div>
-      ) : files.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📁</div>
-          <div>Sin archivos aún — sube uno arriba</div>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <table className="files-table">
-            <thead>
-              <tr>
-                <th>Nombre de archivo</th>
-                <th>Tipo</th>
-                <th>Tamaño</th>
-                <th>Subido</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {files.map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <span className="file-name">{f.filename}</span>
-                  </td>
-                  <td>
-                    {f.type === 'EXPORT' ? (
-                      <span className="badge badge-done" style={{ fontSize: 10 }}>
-                        EXPORT
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{f.mimeType}</span>
-                    )}
-                  </td>
-                  <td>{formatBytes(f.size)}</td>
-                  <td>{new Date(f.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        className="btn btn-ghost"
-                        style={{ padding: '4px 10px', fontSize: 12 }}
-                        onClick={() => filesApi.download(f.id, f.filename)}
-                      >
-                        ⬇ Descargar
-                      </button>
-                      {f.type !== 'EXPORT' && (
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '4px 10px', fontSize: 12 }}
-                          disabled={importingId === f.id}
-                          onClick={() => handleImport(f.id)}
-                        >
-                          {importingId === f.id ? 'Iniciando…' : '📥 Importar'}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {totalPages > 1 && (
-            <div className="pagination" style={{ padding: '12px 0' }}>
-              <button
-                className="page-btn"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                ← Anterior
-              </button>
-              <span className="text-muted" style={{ fontSize: 13 }}>
-                Página {page} de {totalPages}
-              </span>
-              <button
-                className="page-btn"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Siguiente →
-              </button>
+
+        {loading ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-on-surface-variant">
+            <div>Cargando…</div>
+          </div>
+        ) : files.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-on-surface-variant">
+            <Icon name="folder_open" size={32} />
+            <div>Sin archivos aún — sube uno arriba</div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container-highest">
+                    <th className="px-4 py-3 text-label-caps font-label-caps font-semibold text-on-surface-variant">
+                      Nombre
+                    </th>
+                    <th className="px-4 py-3 text-label-caps font-label-caps font-semibold text-on-surface-variant">
+                      Tipo
+                    </th>
+                    <th className="px-4 py-3 text-label-caps font-label-caps font-semibold text-on-surface-variant">
+                      Tamaño
+                    </th>
+                    <th className="px-4 py-3 text-label-caps font-label-caps font-semibold text-on-surface-variant">
+                      Subido
+                    </th>
+                    <th className="px-4 py-3 text-label-caps font-label-caps font-semibold text-on-surface-variant">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-body-sm font-body-sm text-on-surface">
+                  {files.map((f) => (
+                    <tr
+                      key={f.id}
+                      className="border-b border-outline-variant transition-colors last:border-0 hover:bg-surface-container-high"
+                    >
+                      <td className="flex items-center gap-3 px-4 py-3">
+                        <Icon name="description" size={18} className="text-on-surface-variant" />
+                        <span className="font-code-md text-code-md">{f.filename}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {f.type === 'EXPORT' ? (
+                          <div className="inline-flex items-center gap-1.5 rounded border border-secondary-container/30 bg-secondary-container/10 px-2 py-0.5 text-secondary-container">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider">
+                              Export
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">{f.mimeType}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-code-md text-code-md text-on-surface-variant">
+                        {formatBytes(f.size)}
+                      </td>
+                      <td className="px-4 py-3 text-on-surface-variant">
+                        {new Date(f.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            className="flex items-center gap-1 rounded border border-outline-variant px-2.5 py-1 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                            onClick={() => filesApi.download(f.id, f.filename)}
+                          >
+                            <Icon name="download" size={14} />
+                            Descargar
+                          </button>
+                          {f.type !== 'EXPORT' && (
+                            <button
+                              className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-body-sm font-body-sm font-medium text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
+                              disabled={importingId === f.id}
+                              onClick={() => handleImport(f.id)}
+                            >
+                              <Icon name="play_arrow" size={14} />
+                              {importingId === f.id ? 'Iniciando…' : 'Importar'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-      )}
-    </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 border-t border-outline-variant p-3">
+                <button
+                  className="rounded border border-outline-variant px-3 py-1 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  ← Anterior
+                </button>
+                <span className="text-body-sm font-body-sm text-on-surface-variant">
+                  Página {page} de {totalPages}
+                </span>
+                <button
+                  className="rounded border border-outline-variant px-3 py-1 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:opacity-40"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
   );
 }
