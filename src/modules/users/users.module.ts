@@ -14,5 +14,8 @@ router.get('/me', (req, res, next) =>
 router.patch('/me', (req, res, next) =>
   controller.updateProfile(req as AuthenticatedRequest, res).catch(next),
 );
+router.post('/me/change-password', (req, res, next) =>
+  controller.changePassword(req as AuthenticatedRequest, res).catch(next),
+);
 
 export { router as usersRouter };

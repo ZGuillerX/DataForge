@@ -332,6 +332,35 @@ export const openapiSpec = {
         },
       },
     },
+    '/users/me/change-password': {
+      post: {
+        tags: ['Users'],
+        summary: 'Cambiar la contrasena estando autenticado',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['currentPassword', 'newPassword'],
+                properties: {
+                  currentPassword: { type: 'string' },
+                  newPassword: {
+                    type: 'string',
+                    description: '8+ caracteres, mayuscula, minuscula y numero o simbolo',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Contrasena actualizada' },
+          '401': { description: 'No autenticado o contrasena actual incorrecta' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
     '/files/upload': {
       post: {
         tags: ['Files'],

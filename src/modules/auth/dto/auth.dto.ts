@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(8, 'Debe tener al menos 8 caracteres')
   .regex(/[A-Z]/, 'Debe incluir al menos una mayúscula')

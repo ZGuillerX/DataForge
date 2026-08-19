@@ -21,4 +21,12 @@ export class UsersRepository {
       },
     });
   }
+
+  async findPasswordHash(id: string) {
+    return prisma.user.findUnique({ where: { id }, select: { passwordHash: true } });
+  }
+
+  async updatePassword(id: string, passwordHash: string) {
+    await prisma.user.update({ where: { id }, data: { passwordHash } });
+  }
 }
