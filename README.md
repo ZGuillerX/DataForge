@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ DataForge
+# DataForge
 
 ### Plataforma de Procesamiento de Datos — Sistema Backend Basado en Jobs Asíncronos
 
@@ -525,7 +525,4 @@ Un worker BullMQ bloqueante en el mismo proceso que Express degradaría el tiemp
 ---
 
 <div align="center">
-
-**DataForge** — Construido con principios de ingeniería backend real, no solo CRUD.
-
 </div>
