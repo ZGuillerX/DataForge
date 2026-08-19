@@ -4,9 +4,10 @@ import Icon from './Icon';
 
 interface FileUploaderProps {
   onUploaded: (file: UploadedFile) => void;
+  folderId?: string | null;
 }
 
-export default function FileUploader({ onUploaded }: FileUploaderProps) {
+export default function FileUploader({ onUploaded, folderId }: FileUploaderProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -20,7 +21,7 @@ export default function FileUploader({ onUploaded }: FileUploaderProps) {
     setError('');
     setProgress(0);
     try {
-      const uploaded = await filesApi.upload(file, setProgress);
+      const uploaded = await filesApi.upload(file, setProgress, folderId);
       onUploaded(uploaded);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al subir el archivo';
