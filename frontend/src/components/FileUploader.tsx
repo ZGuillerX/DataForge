@@ -71,7 +71,7 @@ export default function FileUploader({ onUploaded }: FileUploaderProps) {
         <h3 className="mb-1 text-headline-sm font-headline-sm font-medium text-on-surface">
           {uploading ? 'Subiendo…' : 'Arrastra un archivo aquí'}
         </h3>
-        <p className="mb-5 max-w-md text-body-sm font-body-sm text-on-surface-variant">
+        <p className="mb-5 max-w-[28rem] text-body-sm font-body-sm text-on-surface-variant">
           Formatos soportados: CSV, XLS, XLSX.
         </p>
         <button

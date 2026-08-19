@@ -64,7 +64,7 @@ export default function Profile() {
         </p>
       </div>
 
-      <div className="max-w-md rounded-xl border border-outline-variant bg-surface-container p-md">
+      <div className="max-w-[28rem] rounded-xl border border-outline-variant bg-surface-container p-md">
         <div className="mb-5 flex items-center gap-3 border-b border-outline-variant pb-4">
           <Icon name="person" className="text-primary" size={24} />
           <h3 className="text-headline-sm font-headline-sm font-semibold text-on-surface">
