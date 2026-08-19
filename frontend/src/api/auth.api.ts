@@ -10,4 +10,12 @@ export const authApi = {
     const { data } = await client.post('/auth/register', { email, password, name });
     return data.data;
   },
+  forgotPassword: async (email: string): Promise<{ message: string; devToken?: string }> => {
+    const { data } = await client.post('/auth/forgot-password', { email });
+    return data;
+  },
+  resetPassword: async (token: string, password: string): Promise<{ message: string }> => {
+    const { data } = await client.post('/auth/reset-password', { token, password });
+    return data;
+  },
 };

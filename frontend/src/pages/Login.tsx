@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth.api';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
+import PasswordStrength, { isPasswordValid } from '../components/PasswordStrength';
 
 type Tab = 'login' | 'register';
 
@@ -9,15 +11,31 @@ export default function Login() {
   const [tab, setTab] = useState<Tab>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const passwordsMismatch =
+    tab === 'register' && confirmPassword.length > 0 && password !== confirmPassword;
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (tab === 'register') {
+      if (!isPasswordValid(password)) {
+        setError('La contraseña no cumple los requisitos mínimos');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Las contraseñas no coinciden');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res =
@@ -101,18 +119,48 @@ export default function Login() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-label-caps font-label-caps text-on-surface-variant">
-              Contraseña
-            </label>
-            <input
-              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
-              type="password"
-              placeholder="••••••••"
+            <div className="flex items-center justify-between">
+              <label className="text-label-caps font-label-caps text-on-surface-variant">
+                Contraseña
+              </label>
+              {tab === 'login' && (
+                <Link
+                  to="/forgot-password"
+                  className="text-label-caps font-label-caps text-primary hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              )}
+            </div>
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
+              placeholder="••••••••"
+              autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
               required
             />
+            {tab === 'register' && password.length > 0 && <PasswordStrength password={password} />}
           </div>
+
+          {tab === 'register' && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-label-caps font-label-caps text-on-surface-variant">
+                Confirmar contraseña
+              </label>
+              <PasswordInput
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                required
+              />
+              {passwordsMismatch && (
+                <span className="text-label-caps font-label-caps text-error">
+                  Las contraseñas no coinciden
+                </span>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="rounded border border-error/30 bg-error/10 px-3 py-2 text-body-sm font-body-sm text-error">
