@@ -33,7 +33,13 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job }: JobCardProps) {
-  const pct = job.totalRows > 0 ? Math.round((job.processedRows / job.totalRows) * 100) : 0;
+  const isDedup = job.type === 'DEDUP';
+  const pct =
+    job.totalRows > 0
+      ? Math.round((job.processedRows / job.totalRows) * 100)
+      : job.status === 'DONE'
+        ? 100
+        : 0;
   const fillColor =
     job.status === 'DONE' ? 'bg-secondary-container' : job.status === 'FAILED' ? 'bg-error' : 'bg-primary';
 
@@ -51,10 +57,15 @@ export default function JobCard({ job }: JobCardProps) {
         </div>
         <div className="mt-0.5 flex items-center gap-3 text-label-caps font-label-caps text-on-surface-variant">
           <span>{new Date(job.createdAt).toLocaleDateString()}</span>
-          {job.totalRows > 0 && (
+          {job.totalRows > 0 ? (
             <span>
               {job.processedRows.toLocaleString()} / {job.totalRows.toLocaleString()} filas
             </span>
+          ) : (
+            isDedup &&
+            job.processedRows > 0 && (
+              <span>{job.processedRows.toLocaleString()} duplicados encontrados</span>
+            )
           )}
         </div>
       </div>
