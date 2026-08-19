@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { filesApi, type UploadedFile } from '../api/files.api';
 import { jobsApi } from '../api/jobs.api';
 import FileUploader from '../components/FileUploader';
 import Icon from '../components/Icon';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -11,11 +13,13 @@ function formatBytes(bytes: number): string {
 }
 
 export default function Files() {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [importingId, setImportingId] = useState<string | null>(null);
+  const [confirmingFile, setConfirmingFile] = useState<UploadedFile | null>(null);
   const [message, setMessage] = useState('');
   const limit = 15;
 
@@ -42,12 +46,14 @@ export default function Files() {
     setTimeout(() => setMessage(''), 4000);
   };
 
-  const handleImport = async (fileId: string) => {
+  const confirmImport = async () => {
+    if (!confirmingFile) return;
+    const fileId = confirmingFile.id;
     setImportingId(fileId);
     try {
       const job = await jobsApi.createImport(fileId);
-      setMessage(`✅ Trabajo de importación iniciado: ${job.id.slice(0, 8)}…`);
-      setTimeout(() => setMessage(''), 5000);
+      setConfirmingFile(null);
+      navigate(`/jobs/${job.id}`);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string };
       const msg =
@@ -56,6 +62,7 @@ export default function Files() {
           ? 'No se pudo conectar con el servidor'
           : 'Error al iniciar importación');
       setMessage(`❌ ${msg}`);
+      setConfirmingFile(null);
       setTimeout(() => setMessage(''), 5000);
     } finally {
       setImportingId(null);
@@ -168,7 +175,7 @@ export default function Files() {
                             <button
                               className="flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-body-sm font-body-sm font-medium text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
                               disabled={importingId === f.id}
-                              onClick={() => handleImport(f.id)}
+                              onClick={() => setConfirmingFile(f)}
                             >
                               <Icon name="play_arrow" size={14} />
                               {importingId === f.id ? 'Iniciando…' : 'Importar'}
@@ -205,6 +212,17 @@ export default function Files() {
           </>
         )}
       </div>
+
+      {confirmingFile && (
+        <ConfirmDialog
+          title="Confirmar importación"
+          message={`Se va a crear un trabajo de importación para "${confirmingFile.filename}". Vas a ver el progreso en la pantalla del trabajo.`}
+          confirmLabel="Importar"
+          loading={importingId === confirmingFile.id}
+          onConfirm={confirmImport}
+          onCancel={() => setConfirmingFile(null)}
+        />
+      )}
     </>
   );
 }

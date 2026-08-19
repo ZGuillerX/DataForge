@@ -23,8 +23,11 @@ export const jobsApi = {
     const { data } = await client.post('/jobs/dedup', { jobId });
     return data.data;
   },
-  createExport: async (format: 'csv' | 'json' = 'csv'): Promise<Job> => {
-    const { data } = await client.post('/jobs/export', { format });
+  createExport: async (
+    format: 'csv' | 'json' = 'csv',
+    filters?: { jobId?: string; isValid?: boolean; isDuplicate?: boolean },
+  ): Promise<Job> => {
+    const { data } = await client.post('/jobs/export', { format, filters });
     return data.data;
   },
   getResults: async (id: string, page = 1, filter?: 'all' | 'valid' | 'invalid' | 'duplicate') => {

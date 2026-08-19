@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { jobsApi } from '../api/jobs.api';
 import { filesApi, type UploadedFile } from '../api/files.api';
 import type { Job } from '../types/job';
 import JobCard from '../components/JobCard';
 import Icon from '../components/Icon';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } }; message?: string };
@@ -13,20 +15,32 @@ function extractErrorMessage(err: unknown): string {
 }
 
 type Panel = 'import' | 'dedup' | 'export' | null;
+type ExportRecordFilter = 'valid' | 'duplicate' | 'unique' | 'invalid';
+
+const EXPORT_FILTER_LABEL: Record<ExportRecordFilter, string> = {
+  valid: 'Todos los registros válidos',
+  duplicate: 'Solo duplicados',
+  unique: 'Sin duplicados (únicos)',
+  invalid: 'Filas inválidas',
+};
 
 export default function Jobs() {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [importJobs, setImportJobs] = useState<Job[]>([]);
+  const [completedImportJobs, setCompletedImportJobs] = useState<Job[]>([]);
   const [panel, setPanel] = useState<Panel>(null);
   const [selectedFileId, setSelectedFileId] = useState('');
   const [selectedJobId, setSelectedJobId] = useState('');
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [exportSourceJobId, setExportSourceJobId] = useState('');
+  const [exportRecordFilter, setExportRecordFilter] = useState<ExportRecordFilter>('valid');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState<Panel>(null);
   const limit = 10;
 
   const loadJobs = async (p = page) => {
@@ -55,10 +69,12 @@ export default function Jobs() {
     }
   };
 
-  const loadImportJobs = async () => {
+  const loadCompletedImportJobs = async () => {
     try {
       const data = await jobsApi.list(1, 50);
-      setImportJobs((data.data ?? []).filter((j) => j.type === 'IMPORT' && j.status === 'DONE'));
+      setCompletedImportJobs(
+        (data.data ?? []).filter((j) => j.type === 'IMPORT' && j.status === 'DONE'),
+      );
     } catch {
       /* ignore */
     }
@@ -70,58 +86,90 @@ export default function Jobs() {
     if (next === 'import') loadFiles();
     if (next === 'dedup') {
       setSelectedJobId('');
-      loadImportJobs();
+      loadCompletedImportJobs();
+    }
+    if (next === 'export') {
+      setExportSourceJobId('');
+      setExportRecordFilter('valid');
+      loadCompletedImportJobs();
     }
   };
 
-  const createImport = async () => {
+  const selectedFile = files.find((f) => f.id === selectedFileId);
+  const selectedImportJob = completedImportJobs.find((j) => j.id === selectedJobId);
+  const exportSourceJob = completedImportJobs.find((j) => j.id === exportSourceJobId);
+
+  const requestImport = () => {
     if (!selectedFileId) {
       setError('Selecciona un archivo');
       return;
     }
-    setCreating(true);
     setError('');
-    try {
-      await jobsApi.createImport(selectedFileId);
-      setPanel(null);
-      setPage(1);
-      loadJobs(1);
-    } catch (err: unknown) {
-      setError(extractErrorMessage(err));
-    } finally {
-      setCreating(false);
-    }
+    setConfirming('import');
   };
 
-  const createDedup = async () => {
+  const requestDedup = () => {
     if (!selectedJobId) {
       setError('Selecciona un trabajo de importación');
       return;
     }
-    setCreating(true);
     setError('');
+    setConfirming('dedup');
+  };
+
+  const requestExport = () => {
+    setError('');
+    setConfirming('export');
+  };
+
+  const confirmImport = async () => {
+    setCreating(true);
     try {
-      await jobsApi.createDedup(selectedJobId);
+      const job = await jobsApi.createImport(selectedFileId);
       setPanel(null);
-      setPage(1);
-      loadJobs(1);
+      setConfirming(null);
+      navigate(`/jobs/${job.id}`);
     } catch (err: unknown) {
       setError(extractErrorMessage(err));
+      setConfirming(null);
     } finally {
       setCreating(false);
     }
   };
 
-  const createExport = async () => {
+  const confirmDedup = async () => {
     setCreating(true);
-    setError('');
     try {
-      await jobsApi.createExport(exportFormat);
+      const job = await jobsApi.createDedup(selectedJobId);
       setPanel(null);
-      setPage(1);
-      loadJobs(1);
+      setConfirming(null);
+      navigate(`/jobs/${job.id}`);
     } catch (err: unknown) {
       setError(extractErrorMessage(err));
+      setConfirming(null);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const confirmExport = async () => {
+    setCreating(true);
+    try {
+      const filters = exportSourceJobId
+        ? {
+            jobId: exportSourceJobId,
+            ...(exportRecordFilter === 'duplicate' && { isDuplicate: true }),
+            ...(exportRecordFilter === 'unique' && { isDuplicate: false }),
+            ...(exportRecordFilter === 'invalid' && { isValid: false }),
+          }
+        : undefined;
+      const job = await jobsApi.createExport(exportFormat, filters);
+      setPanel(null);
+      setConfirming(null);
+      navigate(`/jobs/${job.id}`);
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err));
+      setConfirming(null);
     } finally {
       setCreating(false);
     }
@@ -193,10 +241,10 @@ export default function Jobs() {
           <div className="flex gap-2">
             <button
               className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
-              onClick={createImport}
+              onClick={requestImport}
               disabled={creating}
             >
-              {creating ? 'Creando…' : 'Iniciar importación'}
+              Iniciar importación
             </button>
             <button
               className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
@@ -223,14 +271,14 @@ export default function Jobs() {
               onChange={(e) => setSelectedJobId(e.target.value)}
             >
               <option value="">— elegir trabajo completado —</option>
-              {importJobs.map((j) => (
+              {completedImportJobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.inputFile?.filename ?? j.id.slice(0, 8)} — {j.processedRows} filas (
                   {new Date(j.createdAt).toLocaleDateString()})
                 </option>
               ))}
             </select>
-            {importJobs.length === 0 && (
+            {completedImportJobs.length === 0 && (
               <p className="text-body-sm font-body-sm text-on-surface-variant">
                 No hay trabajos de importación completados aún.
               </p>
@@ -244,10 +292,10 @@ export default function Jobs() {
           <div className="flex gap-2">
             <button
               className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
-              onClick={createDedup}
+              onClick={requestDedup}
               disabled={creating}
             >
-              {creating ? 'Creando…' : 'Iniciar deduplicación'}
+              Iniciar deduplicación
             </button>
             <button
               className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
@@ -264,6 +312,44 @@ export default function Jobs() {
           <div className="mb-3 text-headline-sm font-headline-sm font-medium text-on-surface">
             Crear trabajo de exportación
           </div>
+
+          <div className="mb-3 flex flex-col gap-1.5">
+            <label className="text-label-caps font-label-caps text-on-surface-variant">
+              Fuente
+            </label>
+            <select
+              className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
+              value={exportSourceJobId}
+              onChange={(e) => setExportSourceJobId(e.target.value)}
+            >
+              <option value="">Todos mis registros válidos (todos los trabajos)</option>
+              {completedImportJobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.inputFile?.filename ?? j.id.slice(0, 8)} — {j.processedRows} filas
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {exportSourceJobId && (
+            <div className="mb-3 flex flex-col gap-1.5">
+              <label className="text-label-caps font-label-caps text-on-surface-variant">
+                Registros a incluir
+              </label>
+              <select
+                className="rounded border border-outline-variant bg-background px-3 py-2 text-body-sm font-body-sm text-on-surface focus:border-primary focus:outline-none"
+                value={exportRecordFilter}
+                onChange={(e) => setExportRecordFilter(e.target.value as ExportRecordFilter)}
+              >
+                {(Object.keys(EXPORT_FILTER_LABEL) as ExportRecordFilter[]).map((f) => (
+                  <option key={f} value={f}>
+                    {EXPORT_FILTER_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="mb-3 flex flex-col gap-1.5">
             <label className="text-label-caps font-label-caps text-on-surface-variant">
               Formato
@@ -285,10 +371,10 @@ export default function Jobs() {
           <div className="flex gap-2">
             <button
               className="rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
-              onClick={createExport}
+              onClick={requestExport}
               disabled={creating}
             >
-              {creating ? 'Creando…' : 'Iniciar exportación'}
+              Iniciar exportación
             </button>
             <button
               className="rounded border border-outline-variant px-4 py-2 text-body-sm font-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
@@ -338,6 +424,43 @@ export default function Jobs() {
             </div>
           )}
         </>
+      )}
+
+      {confirming === 'import' && (
+        <ConfirmDialog
+          title="Confirmar importación"
+          message={`Se va a crear un trabajo de importación para "${selectedFile?.filename ?? 'el archivo seleccionado'}". Vas a ver el progreso en la pantalla del trabajo.`}
+          confirmLabel="Importar"
+          loading={creating}
+          onConfirm={confirmImport}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+
+      {confirming === 'dedup' && (
+        <ConfirmDialog
+          title="Confirmar deduplicación"
+          message={`Se va a buscar duplicados en "${selectedImportJob?.inputFile?.filename ?? 'el trabajo seleccionado'}" (${selectedImportJob?.processedRows ?? 0} filas).`}
+          confirmLabel="Deduplicar"
+          loading={creating}
+          onConfirm={confirmDedup}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+
+      {confirming === 'export' && (
+        <ConfirmDialog
+          title="Confirmar exportación"
+          message={
+            exportSourceJobId
+              ? `Se va a exportar "${EXPORT_FILTER_LABEL[exportRecordFilter]}" de "${exportSourceJob?.inputFile?.filename ?? 'el trabajo seleccionado'}" en formato ${exportFormat.toUpperCase()}.`
+              : `Se van a exportar todos tus registros válidos en formato ${exportFormat.toUpperCase()}.`
+          }
+          confirmLabel="Exportar"
+          loading={creating}
+          onConfirm={confirmExport}
+          onCancel={() => setConfirming(null)}
+        />
       )}
     </>
   );

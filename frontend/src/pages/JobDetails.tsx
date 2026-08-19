@@ -4,6 +4,7 @@ import { jobsApi } from '../api/jobs.api';
 import { filesApi } from '../api/files.api';
 import type { Job, JobRecord } from '../types/job';
 import Icon from '../components/Icon';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 type ResultFilter = 'all' | 'valid' | 'invalid' | 'duplicate';
 
@@ -73,6 +74,7 @@ export default function JobDetails() {
   const [retrying, setRetrying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [deduping, setDeduping] = useState(false);
+  const [confirmingDedup, setConfirmingDedup] = useState(false);
   const [logLines, setLogLines] = useState<LogLine[]>([]);
   const esRef = useRef<EventSource | null>(null);
   const seededLogRef = useRef(false);
@@ -128,9 +130,10 @@ export default function JobDetails() {
     setDeduping(true);
     try {
       const dedupJob = await jobsApi.createDedup(id);
+      setConfirmingDedup(false);
       navigate(`/jobs/${dedupJob.id}`);
     } catch {
-      /* ignore */
+      setConfirmingDedup(false);
     } finally {
       setDeduping(false);
     }
@@ -330,7 +333,7 @@ export default function JobDetails() {
           {job.type === 'IMPORT' && job.status === 'DONE' && (
             <button
               className="flex items-center gap-2 rounded bg-primary px-4 py-2 text-body-sm font-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-fixed disabled:opacity-50"
-              onClick={handleRunDedup}
+              onClick={() => setConfirmingDedup(true)}
               disabled={deduping}
             >
               <Icon name="content_copy" size={18} />
@@ -579,6 +582,17 @@ export default function JobDetails() {
           <Icon name="search" size={32} />
           <div>Sin resultados para el filtro seleccionado</div>
         </div>
+      )}
+
+      {confirmingDedup && (
+        <ConfirmDialog
+          title="Confirmar deduplicación"
+          message={`Se va a buscar duplicados en los ${job.processedRows.toLocaleString()} registros procesados de este trabajo.`}
+          confirmLabel="Deduplicar"
+          loading={deduping}
+          onConfirm={handleRunDedup}
+          onCancel={() => setConfirmingDedup(false)}
+        />
       )}
     </>
   );
