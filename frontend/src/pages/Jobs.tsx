@@ -48,7 +48,7 @@ export default function Jobs() {
 
   const loadFiles = async () => {
     try {
-      const data = await filesApi.list(1);
+      const data = await filesApi.list(1, 100);
       setFiles(data.data ?? []);
     } catch {
       /* ignore */

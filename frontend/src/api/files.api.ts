@@ -22,8 +22,8 @@ export const filesApi = {
     });
     return data.data;
   },
-  list: async (page = 1) => {
-    const { data } = await client.get('/files', { params: { page } });
+  list: async (page = 1, limit?: number) => {
+    const { data } = await client.get('/files', { params: { page, limit } });
     return data;
   },
   download: async (id: string, filename: string) => {

@@ -4,6 +4,7 @@ import { NotFoundError, ForbiddenError, ConflictError } from '../../../shared/er
 import { FileType } from '@prisma/client';
 import { isSupportedImportFormat } from '../../../shared/utils/file.util';
 import { storageDriver } from '../storage/storage.factory';
+import { PAGINATION } from '../../../shared/constants/pagination';
 
 export class FilesService {
   private filesRepo: FilesRepository;
@@ -51,8 +52,13 @@ export class FilesService {
     return file;
   }
 
-  async getUserFiles(userId: string) {
-    return this.filesRepo.findByUserId(userId);
+  async getUserFiles(
+    userId: string,
+    page = PAGINATION.DEFAULT_PAGE,
+    limit = PAGINATION.DEFAULT_LIMIT,
+  ) {
+    const safeLimit = Math.min(limit, PAGINATION.MAX_LIMIT);
+    return this.filesRepo.findByUserId(userId, page, safeLimit);
   }
 
   async getDownloadStream(fileId: string, userId: string) {

@@ -17,11 +17,18 @@ export class FilesRepository {
     return prisma.file.findUnique({ where: { id } });
   }
 
-  async findByUserId(userId: string) {
-    return prisma.file.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findByUserId(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [files, total] = await Promise.all([
+      prisma.file.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.file.count({ where: { userId } }),
+    ]);
+    return { files, total };
   }
 
   async findByUserIdAndFilename(userId: string, filename: string) {

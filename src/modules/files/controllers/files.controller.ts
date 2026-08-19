@@ -22,8 +22,14 @@ export class FilesController {
   }
 
   async listFiles(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const files = await filesService.getUserFiles(req.user.sub);
-    res.json({ success: true, data: files });
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const result = await filesService.getUserFiles(req.user.sub, page, limit);
+    res.json({
+      success: true,
+      data: result.files,
+      meta: { total: result.total, page, limit },
+    });
   }
 
   async download(req: AuthenticatedRequest, res: Response): Promise<void> {

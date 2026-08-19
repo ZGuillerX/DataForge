@@ -311,7 +311,11 @@ export const openapiSpec = {
     '/files': {
       get: {
         tags: ['Files'],
-        summary: 'Listar archivos del usuario',
+        summary: 'Listar archivos del usuario (paginado)',
+        parameters: [
+          { $ref: '#/components/parameters/Page' },
+          { $ref: '#/components/parameters/Limit' },
+        ],
         responses: {
           '200': {
             description: 'OK',
@@ -322,6 +326,14 @@ export const openapiSpec = {
                   properties: {
                     success: { type: 'boolean' },
                     data: { type: 'array', items: { $ref: '#/components/schemas/FileRecord' } },
+                    meta: {
+                      type: 'object',
+                      properties: {
+                        total: { type: 'integer' },
+                        page: { type: 'integer' },
+                        limit: { type: 'integer' },
+                      },
+                    },
                   },
                 },
               },

@@ -23,7 +23,7 @@ export default function Files() {
   const load = async (p = page) => {
     setLoading(true);
     try {
-      const data = await filesApi.list(p);
+      const data = await filesApi.list(p, limit);
       setFiles(data.data ?? []);
       setTotal(data.meta?.total ?? 0);
     } catch {
