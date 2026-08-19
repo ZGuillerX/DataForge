@@ -8,6 +8,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/jobs': 'Trabajos',
   '/files': 'Archivos',
+  '/profile': 'Perfil',
 };
 
 interface LayoutProps {

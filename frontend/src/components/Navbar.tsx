@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/layout.css';
 
@@ -28,10 +28,10 @@ export default function Navbar({ title }: NavbarProps) {
     <header className="navbar">
       <h1 className="navbar-title">{title}</h1>
       <div className="navbar-right">
-        <div className="user-badge">
+        <Link to="/profile" className="user-badge" style={{ textDecoration: 'none' }}>
           <div className="user-avatar">{initials}</div>
           <span>{user?.email}</span>
-        </div>
+        </Link>
         <button className="btn btn-ghost" onClick={handleLogout}>
           Cerrar sesión
         </button>

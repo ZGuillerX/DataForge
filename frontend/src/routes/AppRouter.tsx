@@ -6,6 +6,7 @@ import Dashboard from '../pages/Dashboard';
 import Jobs from '../pages/Jobs';
 import Files from '../pages/Files';
 import JobDetails from '../pages/JobDetails';
+import Profile from '../pages/Profile';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export default function AppRouter() {
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/jobs/:id" element={<JobDetails />} />
                   <Route path="/files" element={<Files />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </Layout>
