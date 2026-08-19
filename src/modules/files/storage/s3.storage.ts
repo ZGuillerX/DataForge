@@ -1,14 +1,14 @@
-import fs from "fs";
-import type { Readable } from "stream";
+import fs from 'fs';
+import type { Readable } from 'stream';
 import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
-} from "@aws-sdk/client-s3";
-import { storageConfig } from "../../../config/storage";
-import type { StorageDriver } from "./storage.interface";
+} from '@aws-sdk/client-s3';
+import { storageConfig } from '../../../config/storage';
+import type { StorageDriver } from './storage.interface';
 
 /**
  * Sube el archivo temporal (ya escrito a disco local por multer o por

@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../../../shared/types/request.type";
-import { UsersService } from "../services/users.service";
-import { z } from "zod";
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../../../shared/types/request.type';
+import { UsersService } from '../services/users.service';
+import { z } from 'zod';
 
 const usersService = new UsersService();
 

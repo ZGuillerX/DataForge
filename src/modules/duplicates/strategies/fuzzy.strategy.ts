@@ -1,30 +1,25 @@
-import Fuse from "fuse.js";
-import type {
-  DeduplicationStrategy,
-  DuplicateMatch,
-} from "./strategy.interface";
+import Fuse from 'fuse.js';
+import type { DeduplicationStrategy, DuplicateMatch } from './strategy.interface';
 
 const FUZZY_THRESHOLD = 0.85; // similitud mínima para marcar como duplicado
 
 export class FuzzyStrategy implements DeduplicationStrategy {
-  name = "fuzzy";
+  name = 'fuzzy';
 
-  findDuplicates(
-    records: Array<{ id: string; data: Record<string, unknown> }>,
-  ): DuplicateMatch[] {
+  findDuplicates(records: Array<{ id: string; data: Record<string, unknown> }>): DuplicateMatch[] {
     const matches: DuplicateMatch[] = [];
     const nameField = this.detectNameField(records[0]?.data ?? {});
     if (!nameField) return matches;
 
     const items = records.map((r) => ({
       id: r.id,
-      name: String(r.data[nameField] ?? "")
+      name: String(r.data[nameField] ?? '')
         .toLowerCase()
         .trim(),
     }));
 
     const fuse = new Fuse(items, {
-      keys: ["name"],
+      keys: ['name'],
       includeScore: true,
       threshold: 1 - FUZZY_THRESHOLD,
       minMatchCharLength: 3,
@@ -45,7 +40,7 @@ export class FuzzyStrategy implements DeduplicationStrategy {
           matches.push({
             recordId: result.item.id,
             duplicateOfId: item.id,
-            ruleTriggered: "fuzzy",
+            ruleTriggered: 'fuzzy',
             score: similarity,
           });
           seen.add(result.item.id);
@@ -58,14 +53,7 @@ export class FuzzyStrategy implements DeduplicationStrategy {
   }
 
   private detectNameField(data: Record<string, unknown>): string | null {
-    const nameFields = [
-      "name",
-      "Name",
-      "NAME",
-      "nombre",
-      "full_name",
-      "fullName",
-    ];
+    const nameFields = ['name', 'Name', 'NAME', 'nombre', 'full_name', 'fullName'];
     for (const field of nameFields) {
       if (field in data) return field;
     }

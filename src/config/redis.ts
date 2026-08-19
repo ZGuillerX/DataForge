@@ -1,5 +1,5 @@
-import IORedis from "ioredis";
-import { env } from "./env";
+import IORedis from 'ioredis';
+import { env } from './env';
 
 export const redisConnection = new IORedis({
   host: env.REDIS_HOST,
@@ -8,10 +8,10 @@ export const redisConnection = new IORedis({
   maxRetriesPerRequest: null, // requerido por BullMQ
 });
 
-redisConnection.on("connect", () => {
-  console.log("✅ Redis connected");
+redisConnection.on('connect', () => {
+  console.log('✅ Redis connected');
 });
 
-redisConnection.on("error", (err) => {
-  console.error("❌ Redis error:", err.message);
+redisConnection.on('error', (err) => {
+  console.error('❌ Redis error:', err.message);
 });

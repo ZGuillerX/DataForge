@@ -1,4 +1,4 @@
-export const JOB_QUEUE_NAME = "dataforge-jobs";
+export const JOB_QUEUE_NAME = 'dataforge-jobs';
 
 export const CHUNK_SIZE = 1000; // filas por chunk
 

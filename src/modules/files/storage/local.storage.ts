@@ -1,18 +1,11 @@
-import fs from "fs";
-import multer from "multer";
-import path from "path";
-import { env } from "../../../config/env";
-import { storageConfig } from "../../../config/storage";
-import { generateUniqueFilename } from "../../../shared/utils/file.util";
-import { ValidationError } from "../../../shared/errors/app-error";
-import type { StorageDriver } from "./storage.interface";
-
-const ALLOWED_MIMETYPES = [
-  "text/csv",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-];
+import fs from 'fs';
+import multer from 'multer';
+import path from 'path';
+import { env } from '../../../config/env';
+import { storageConfig } from '../../../config/storage';
+import { generateUniqueFilename } from '../../../shared/utils/file.util';
+import { ValidationError } from '../../../shared/errors/app-error';
+import type { StorageDriver } from './storage.interface';
 
 export const upload = multer({
   storage: multer.diskStorage({
@@ -28,9 +21,9 @@ export const upload = multer({
   },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const allowed = [".csv", ".xlsx", ".xls"];
+    const allowed = ['.csv', '.xlsx', '.xls'];
     if (!allowed.includes(ext)) {
-      return cb(new ValidationError("Only CSV and Excel files are allowed"));
+      return cb(new ValidationError('Only CSV and Excel files are allowed'));
     }
     cb(null, true);
   },

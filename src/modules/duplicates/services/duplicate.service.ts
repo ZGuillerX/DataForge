@@ -1,11 +1,11 @@
-import { EmailStrategy } from "../strategies/email.strategy";
-import { PhoneStrategy } from "../strategies/phone.strategy";
-import { FuzzyStrategy } from "../strategies/fuzzy.strategy";
-import { DuplicatesRepository } from "../repositories/duplicates.repository";
-import { RecordsRepository } from "../../records/repositories/records.repository";
-import type { DuplicateMatch } from "../strategies/strategy.interface";
+import { EmailStrategy } from '../strategies/email.strategy';
+import { PhoneStrategy } from '../strategies/phone.strategy';
+import { FuzzyStrategy } from '../strategies/fuzzy.strategy';
+import { DuplicatesRepository } from '../repositories/duplicates.repository';
+import { RecordsRepository } from '../../records/repositories/records.repository';
+import type { DuplicateMatch } from '../strategies/strategy.interface';
 
-type RuleName = "email" | "phone" | "fuzzy";
+type RuleName = 'email' | 'phone' | 'fuzzy';
 
 export class DuplicateService {
   private strategies = {
@@ -38,9 +38,7 @@ export class DuplicateService {
 
     if (uniqueMatches.length > 0) {
       await this.dupRepo.bulkCreate(uniqueMatches);
-      await Promise.all(
-        uniqueMatches.map((m) => this.recordsRepo.markAsDuplicate(m.recordId)),
-      );
+      await Promise.all(uniqueMatches.map((m) => this.recordsRepo.markAsDuplicate(m.recordId)));
     }
 
     return uniqueMatches.length;

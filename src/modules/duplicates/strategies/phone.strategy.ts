@@ -1,14 +1,9 @@
-import type {
-  DeduplicationStrategy,
-  DuplicateMatch,
-} from "./strategy.interface";
+import type { DeduplicationStrategy, DuplicateMatch } from './strategy.interface';
 
 export class PhoneStrategy implements DeduplicationStrategy {
-  name = "phone";
+  name = 'phone';
 
-  findDuplicates(
-    records: Array<{ id: string; data: Record<string, unknown> }>,
-  ): DuplicateMatch[] {
+  findDuplicates(records: Array<{ id: string; data: Record<string, unknown> }>): DuplicateMatch[] {
     const matches: DuplicateMatch[] = [];
     const seen = new Map<string, string>(); // phone -> recordId
 
@@ -21,7 +16,7 @@ export class PhoneStrategy implements DeduplicationStrategy {
         matches.push({
           recordId: record.id,
           duplicateOfId: existing,
-          ruleTriggered: "phone",
+          ruleTriggered: 'phone',
           score: 1.0,
         });
       } else {
@@ -33,18 +28,11 @@ export class PhoneStrategy implements DeduplicationStrategy {
   }
 
   private extractPhone(data: Record<string, unknown>): string | null {
-    const phoneFields = [
-      "phone",
-      "Phone",
-      "PHONE",
-      "telefono",
-      "tel",
-      "mobile",
-    ];
+    const phoneFields = ['phone', 'Phone', 'PHONE', 'telefono', 'tel', 'mobile'];
     for (const field of phoneFields) {
       const val = data[field];
-      if (typeof val === "string" || typeof val === "number") {
-        const normalized = String(val).replace(/[\s\-\(\)\+]/g, "");
+      if (typeof val === 'string' || typeof val === 'number') {
+        const normalized = String(val).replace(/[\s\-()+]/g, '');
         if (normalized.length >= 7) return normalized;
       }
     }

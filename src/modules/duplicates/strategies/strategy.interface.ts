@@ -7,7 +7,5 @@ export interface DuplicateMatch {
 
 export interface DeduplicationStrategy {
   name: string;
-  findDuplicates(
-    records: Array<{ id: string; data: Record<string, unknown> }>,
-  ): DuplicateMatch[];
+  findDuplicates(records: Array<{ id: string; data: Record<string, unknown> }>): DuplicateMatch[];
 }

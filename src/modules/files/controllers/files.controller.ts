@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../../../shared/types/request.type";
-import { FilesService } from "../services/files.service";
-import path from "path";
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../../../shared/types/request.type';
+import { FilesService } from '../services/files.service';
+import path from 'path';
 
 const filesService = new FilesService();
 
@@ -9,7 +9,7 @@ export class FilesController {
   async upload(req: AuthenticatedRequest, res: Response): Promise<void> {
     const file = req.file;
     if (!file) {
-      res.status(400).json({ success: false, message: "No file provided" });
+      res.status(400).json({ success: false, message: 'No file provided' });
       return;
     }
     const savedFile = await filesService.saveUploadedFile(req.user.sub, file);
@@ -33,15 +33,9 @@ export class FilesController {
   }
 
   async download(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const { stream, file } = await filesService.getDownloadStream(
-      req.params.id,
-      req.user.sub,
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${path.basename(file.filename)}"`,
-    );
-    res.setHeader("Content-Type", file.mimeType);
+    const { stream, file } = await filesService.getDownloadStream(req.params.id, req.user.sub);
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(file.filename)}"`);
+    res.setHeader('Content-Type', file.mimeType);
     stream.pipe(res);
   }
 }

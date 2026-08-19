@@ -1,8 +1,8 @@
 export interface IJob {
   id: string;
   userId: string;
-  type: "IMPORT" | "EXPORT" | "DEDUP";
-  status: "PENDING" | "RUNNING" | "DONE" | "FAILED";
+  type: 'IMPORT' | 'EXPORT' | 'DEDUP';
+  status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
   totalRows: number;
   processedRows: number;
   failedRows: number;
@@ -16,7 +16,7 @@ export interface IJob {
 export interface IQueueJobData {
   jobId: string;
   userId: string;
-  type: "IMPORT" | "EXPORT" | "DEDUP";
+  type: 'IMPORT' | 'EXPORT' | 'DEDUP';
   fileId?: string;
   filters?: Record<string, unknown>;
 }

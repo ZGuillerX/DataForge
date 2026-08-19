@@ -1,7 +1,7 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const CreateImportJobSchema = z.object({
-  fileId: z.string().uuid("Invalid file ID"),
+  fileId: z.string().uuid('Invalid file ID'),
 });
 
 export const CreateExportJobSchema = z.object({
@@ -12,12 +12,12 @@ export const CreateExportJobSchema = z.object({
       isDuplicate: z.boolean().optional(),
     })
     .optional(),
-  format: z.enum(["csv", "json"]).default("csv"),
+  format: z.enum(['csv', 'json']).default('csv'),
 });
 
 export const CreateDedupJobSchema = z.object({
-  jobId: z.string().uuid("Job ID is required for deduplication"),
-  rules: z.array(z.enum(["email", "phone", "fuzzy"])).default(["email"]),
+  jobId: z.string().uuid('Job ID is required for deduplication'),
+  rules: z.array(z.enum(['email', 'phone', 'fuzzy'])).default(['email']),
 });
 
 export type CreateImportJobDto = z.infer<typeof CreateImportJobSchema>;

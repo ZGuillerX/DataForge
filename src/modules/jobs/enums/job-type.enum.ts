@@ -1,5 +1,5 @@
 export enum JobType {
-  IMPORT = "IMPORT",
-  EXPORT = "EXPORT",
-  DEDUP = "DEDUP",
+  IMPORT = 'IMPORT',
+  EXPORT = 'EXPORT',
+  DEDUP = 'DEDUP',
 }

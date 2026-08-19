@@ -1,14 +1,9 @@
-import type {
-  DeduplicationStrategy,
-  DuplicateMatch,
-} from "./strategy.interface";
+import type { DeduplicationStrategy, DuplicateMatch } from './strategy.interface';
 
 export class EmailStrategy implements DeduplicationStrategy {
-  name = "email";
+  name = 'email';
 
-  findDuplicates(
-    records: Array<{ id: string; data: Record<string, unknown> }>,
-  ): DuplicateMatch[] {
+  findDuplicates(records: Array<{ id: string; data: Record<string, unknown> }>): DuplicateMatch[] {
     const matches: DuplicateMatch[] = [];
     const seen = new Map<string, string>(); // email -> recordId
 
@@ -21,7 +16,7 @@ export class EmailStrategy implements DeduplicationStrategy {
         matches.push({
           recordId: record.id,
           duplicateOfId: existing,
-          ruleTriggered: "email",
+          ruleTriggered: 'email',
           score: 1.0,
         });
       } else {
@@ -33,10 +28,10 @@ export class EmailStrategy implements DeduplicationStrategy {
   }
 
   private extractEmail(data: Record<string, unknown>): string | null {
-    const emailFields = ["email", "Email", "EMAIL", "correo", "mail"];
+    const emailFields = ['email', 'Email', 'EMAIL', 'correo', 'mail'];
     for (const field of emailFields) {
       const val = data[field];
-      if (typeof val === "string" && val.includes("@")) {
+      if (typeof val === 'string' && val.includes('@')) {
         return val.trim().toLowerCase();
       }
     }
