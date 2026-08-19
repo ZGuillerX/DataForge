@@ -2,7 +2,10 @@ import { prisma } from '../../../config/database';
 
 export class FoldersRepository {
   async create(userId: string, name: string) {
-    return prisma.folder.create({ data: { userId, name } });
+    return prisma.folder.create({
+      data: { userId, name },
+      include: { _count: { select: { files: true } } },
+    });
   }
 
   async findByUserId(userId: string) {

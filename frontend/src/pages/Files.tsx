@@ -111,7 +111,10 @@ export default function Files() {
     setFolderError('');
     try {
       const folder = await foldersApi.create(newFolderName.trim());
-      setFolders((prev) => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
+      const folderWithCount = { ...folder, _count: folder._count ?? { files: 0 } };
+      setFolders((prev) =>
+        [...prev, folderWithCount].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       setNewFolderName('');
       setShowNewFolder(false);
       setActiveFolder(folder.id);
