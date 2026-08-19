@@ -7,12 +7,40 @@ import { FilesRepository } from "../../files/repositories/files.repository";
 import { createJobLogger } from "../../../shared/utils/logger.util";
 import { storageConfig } from "../../../config/storage";
 import { storageDriver } from "../../files/storage/storage.factory";
+import { CHUNK_SIZE } from "../../../shared/constants/job.constants";
+import { env } from "../../../config/env";
 import { JobStatus, FileType } from "@prisma/client";
-import { prisma } from "../../../config/database";
 
 const jobsRepo = new JobsRepository();
 const recordsRepo = new RecordsRepository();
 const filesRepo = new FilesRepository();
+
+function writeChunk(stream: fs.WriteStream, chunk: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (stream.write(chunk)) {
+      resolve();
+      return;
+    }
+    const onDrain = () => {
+      stream.removeListener("error", onError);
+      resolve();
+    };
+    const onError = (err: Error) => {
+      stream.removeListener("drain", onDrain);
+      reject(err);
+    };
+    stream.once("drain", onDrain);
+    stream.once("error", onError);
+  });
+}
+
+function closeStream(stream: fs.WriteStream): Promise<void> {
+  return new Promise((resolve, reject) => {
+    stream.once("finish", resolve);
+    stream.once("error", reject);
+    stream.end();
+  });
+}
 
 export async function runExportProcessor(
   jobId: string,
@@ -28,24 +56,16 @@ export async function runExportProcessor(
 
   try {
     const job = await jobsRepo.findById(jobId);
-    const format =
-      (job?.filters as Record<string, unknown>)?.["format"] ?? "csv";
+    const format = ((job?.filters as Record<string, unknown>)?.["format"] ?? "csv") as
+      | "csv"
+      | "json";
 
     const sourceJobId = (filters?.["jobId"] as string | undefined) ?? undefined;
 
-    let records;
-    if (sourceJobId) {
-      records = await recordsRepo.findValidByJobId(sourceJobId);
-    } else {
-      // Exportar todos los registros del usuario
-      records = await prisma.record.findMany({
-        where: { job: { userId } },
-        orderBy: { createdAt: "asc" },
-        take: 100_000, // límite de seguridad
-      });
-    }
-
-    const totalRows = records.length;
+    const totalAvailable = sourceJobId
+      ? await recordsRepo.countValidByJobId(sourceJobId)
+      : await recordsRepo.countByUserId(userId);
+    const totalRows = Math.min(totalAvailable, env.MAX_ROWS_PER_JOB);
     await jobsRepo.updateStatus(jobId, JobStatus.RUNNING, { totalRows });
 
     const exportsDir = path.join(storageConfig.localPath, "exports");
@@ -53,18 +73,36 @@ export async function runExportProcessor(
     const tempFilePath = path.join(exportsDir, filename);
     const mimeType = format === "json" ? "application/json" : "text/csv";
 
-    if (format === "json") {
-      const jsonData = records.map((r) => r.data);
-      fs.writeFileSync(tempFilePath, JSON.stringify(jsonData, null, 2), "utf-8");
-    } else {
-      const rows = records.map((r) => r.data as Record<string, unknown>);
-      if (rows.length === 0) {
-        fs.writeFileSync(tempFilePath, "", "utf-8");
+    // Escribe el archivo por chunks (nunca carga el dataset completo en memoria)
+    const writeStream = fs.createWriteStream(tempFilePath, { encoding: "utf-8" });
+    let processed = 0;
+    let headerWritten = false;
+    if (format === "json") await writeChunk(writeStream, "[");
+
+    for (let skip = 0; skip < totalRows; skip += CHUNK_SIZE) {
+      const take = Math.min(CHUNK_SIZE, totalRows - skip);
+      const page = sourceJobId
+        ? await recordsRepo.findValidByJobIdPage(sourceJobId, skip, take)
+        : await recordsRepo.findByUserIdPage(userId, skip, take);
+      if (page.length === 0) break;
+
+      if (format === "json") {
+        const body = page.map((r) => JSON.stringify(r.data)).join(",");
+        await writeChunk(writeStream, processed > 0 ? `,${body}` : body);
       } else {
-        const csv = stringify(rows, { header: true });
-        fs.writeFileSync(tempFilePath, csv, "utf-8");
+        const rows = page.map((r) => r.data as Record<string, unknown>);
+        const csv = stringify(rows, { header: !headerWritten });
+        headerWritten = true;
+        await writeChunk(writeStream, csv);
       }
+
+      processed += page.length;
+      await jobsRepo.incrementProgress(jobId, page.length, 0);
+      log.info(`Export chunk written: offset=${skip}, processed=${processed}/${totalRows}`);
     }
+
+    if (format === "json") await writeChunk(writeStream, "]");
+    await closeStream(writeStream);
 
     const stat = fs.statSync(tempFilePath);
     const location = await storageDriver.persist(tempFilePath, `exports/${filename}`, mimeType);
@@ -78,12 +116,11 @@ export async function runExportProcessor(
     });
 
     await jobsRepo.updateStatus(jobId, JobStatus.DONE, {
-      processedRows: totalRows,
       outputFileId: outputFile.id,
       completedAt: new Date(),
     });
 
-    log.info(`Export completed: ${totalRows} rows, file=${filename}`);
+    log.info(`Export completed: ${processed} rows, file=${filename}`);
   } catch (error) {
     const err = error as Error;
     log.error("Export job failed", { error: err.message });

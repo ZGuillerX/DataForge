@@ -47,6 +47,32 @@ export class RecordsRepository {
     });
   }
 
+  async countValidByJobId(jobId: string) {
+    return prisma.record.count({ where: { jobId, isValid: true } });
+  }
+
+  async findValidByJobIdPage(jobId: string, skip: number, take: number) {
+    return prisma.record.findMany({
+      where: { jobId, isValid: true },
+      orderBy: { rowIndex: 'asc' },
+      skip,
+      take,
+    });
+  }
+
+  async countByUserId(userId: string) {
+    return prisma.record.count({ where: { job: { userId } } });
+  }
+
+  async findByUserIdPage(userId: string, skip: number, take: number) {
+    return prisma.record.findMany({
+      where: { job: { userId } },
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take,
+    });
+  }
+
   async markAsDuplicate(recordId: string) {
     return prisma.record.update({
       where: { id: recordId },
