@@ -27,8 +27,16 @@ export const jobsApi = {
     const { data } = await client.post('/jobs/export', { format });
     return data.data;
   },
-  getResults: async (id: string, page = 1) => {
-    const { data } = await client.get(`/jobs/${id}/results`, { params: { page } });
+  getResults: async (id: string, page = 1, filter?: 'all' | 'valid' | 'invalid' | 'duplicate') => {
+    const params: Record<string, unknown> = { page };
+    if (filter === 'valid') params.isValid = true;
+    if (filter === 'invalid') params.isValid = false;
+    if (filter === 'duplicate') params.isDuplicate = true;
+    const { data } = await client.get(`/jobs/${id}/results`, { params });
     return data;
+  },
+  retry: async (id: string): Promise<Job> => {
+    const { data } = await client.post(`/jobs/${id}/retry`);
+    return data.data;
   },
 };

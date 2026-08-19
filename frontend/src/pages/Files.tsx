@@ -50,8 +50,12 @@ export default function Files() {
       setMessage(`✅ Trabajo de importación iniciado: ${job.id.slice(0, 8)}…`);
       setTimeout(() => setMessage(''), 5000);
     } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Error';
+        e?.response?.data?.message ??
+        (e?.message === 'Network Error'
+          ? 'No se pudo conectar con el servidor'
+          : 'Error al iniciar importación');
       setMessage(`❌ ${msg}`);
       setTimeout(() => setMessage(''), 5000);
     } finally {
@@ -109,7 +113,15 @@ export default function Files() {
                   <td>
                     <span className="file-name">{f.filename}</span>
                   </td>
-                  <td>{f.mimeType}</td>
+                  <td>
+                    {f.type === 'EXPORT' ? (
+                      <span className="badge badge-done" style={{ fontSize: 10 }}>
+                        EXPORT
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{f.mimeType}</span>
+                    )}
+                  </td>
                   <td>{formatBytes(f.size)}</td>
                   <td>{new Date(f.createdAt).toLocaleDateString()}</td>
                   <td>
@@ -121,14 +133,16 @@ export default function Files() {
                       >
                         ⬇ Descargar
                       </button>
-                      <button
-                        className="btn btn-primary"
-                        style={{ padding: '4px 10px', fontSize: 12 }}
-                        disabled={importingId === f.id}
-                        onClick={() => handleImport(f.id)}
-                      >
-                        {importingId === f.id ? 'Iniciando…' : '📥 Importar'}
-                      </button>
+                      {f.type !== 'EXPORT' && (
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '4px 10px', fontSize: 12 }}
+                          disabled={importingId === f.id}
+                          onClick={() => handleImport(f.id)}
+                        >
+                          {importingId === f.id ? 'Iniciando…' : '📥 Importar'}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

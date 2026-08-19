@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobsApi } from '../api/jobs.api';
+import { filesApi } from '../api/files.api';
 import type { Job, JobRecord } from '../types/job';
 import '../styles/dashboard.css';
+
+type ResultFilter = 'all' | 'valid' | 'invalid' | 'duplicate';
 
 const TYPE_LABEL: Record<string, string> = {
   IMPORT: 'Importación',
@@ -19,6 +22,10 @@ export default function JobDetails() {
   const [recordPage, setRecordPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [sseActive, setSseActive] = useState(false);
+  const [resultFilter, setResultFilter] = useState<ResultFilter>('all');
+  const [retrying, setRetrying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [deduping, setDeduping] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   const loadJob = async () => {
@@ -31,14 +38,52 @@ export default function JobDetails() {
     }
   };
 
-  const loadResults = async (p = recordPage) => {
+  const loadResults = async (p = recordPage, filter = resultFilter) => {
     if (!id) return;
     try {
-      const data = await jobsApi.getResults(id, p);
+      const data = await jobsApi.getResults(id, p, filter);
       setRecords(data.data ?? []);
       setRecordTotal(data.meta?.total ?? 0);
     } catch {
       /* ignore */
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!id) return;
+    setRetrying(true);
+    try {
+      const updated = await jobsApi.retry(id);
+      setJob(updated);
+    } catch {
+      /* ignore */
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const handleDownloadExport = async () => {
+    if (!job?.outputFile) return;
+    setDownloading(true);
+    try {
+      await filesApi.download(job.outputFile.id, job.outputFile.filename);
+    } catch {
+      /* ignore */
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleRunDedup = async () => {
+    if (!id) return;
+    setDeduping(true);
+    try {
+      const dedupJob = await jobsApi.createDedup(id);
+      navigate(`/jobs/${dedupJob.id}`);
+    } catch {
+      /* ignore */
+    } finally {
+      setDeduping(false);
     }
   };
 
@@ -89,8 +134,8 @@ export default function JobDetails() {
   }, [job?.status, id]);
 
   useEffect(() => {
-    loadResults(recordPage);
-  }, [recordPage]);
+    loadResults(recordPage, resultFilter);
+  }, [recordPage, resultFilter]);
 
   if (loading) {
     return (
@@ -115,7 +160,13 @@ export default function JobDetails() {
     );
   }
 
-  const pct = job.totalRows > 0 ? Math.round((job.processedRows / job.totalRows) * 100) : 0;
+  const isDedup = job.type === 'DEDUP';
+  const pct =
+    job.totalRows > 0
+      ? Math.round((job.processedRows / job.totalRows) * 100)
+      : job.status === 'DONE'
+        ? 100
+        : 0;
   const fillClass = job.status === 'DONE' ? 'done' : job.status === 'FAILED' ? 'failed' : '';
   const totalPages = Math.ceil(recordTotal / 20);
 
@@ -142,7 +193,39 @@ export default function JobDetails() {
           </div>
           <div className="job-detail-id">{job.id}</div>
         </div>
-        <span className={`badge badge-${job.status.toLowerCase()}`}>{job.status}</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span className={`badge badge-${job.status.toLowerCase()}`}>{job.status}</span>
+          {job.status === 'FAILED' && (
+            <button
+              className="btn btn-ghost"
+              onClick={handleRetry}
+              disabled={retrying}
+              style={{ fontSize: 12, padding: '4px 12px' }}
+            >
+              {retrying ? 'Reintentando…' : '↺ Reintentar'}
+            </button>
+          )}
+          {job.type === 'EXPORT' && job.status === 'DONE' && job.outputFile && (
+            <button
+              className="btn btn-primary"
+              onClick={handleDownloadExport}
+              disabled={downloading}
+              style={{ fontSize: 12, padding: '4px 12px' }}
+            >
+              {downloading ? 'Descargando…' : '⬇ Descargar archivo'}
+            </button>
+          )}
+          {job.type === 'IMPORT' && job.status === 'DONE' && (
+            <button
+              className="btn btn-primary"
+              onClick={handleRunDedup}
+              disabled={deduping}
+              style={{ fontSize: 12, padding: '4px 12px' }}
+            >
+              {deduping ? 'Creando…' : '🔍 Deduplicar datos'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress */}
@@ -158,13 +241,15 @@ export default function JobDetails() {
         >
           <span>Progreso</span>
           <span>
-            {pct}% ({job.processedRows.toLocaleString()} / {job.totalRows.toLocaleString()} filas)
+            {isDedup
+              ? `${job.processedRows.toLocaleString()} duplicados encontrados`
+              : `${pct}% (${job.processedRows.toLocaleString()} / ${job.totalRows.toLocaleString()} filas)`}
           </span>
         </div>
         <div className="progress-bar" style={{ height: 10 }}>
           <div className={`progress-fill ${fillClass}`} style={{ width: `${pct}%` }} />
         </div>
-        {job.failedRows > 0 && (
+        {!isDedup && job.failedRows > 0 && (
           <div style={{ marginTop: 8, fontSize: 13 }} className="text-danger">
             {job.failedRows.toLocaleString()} filas fallidas
           </div>
@@ -209,10 +294,64 @@ export default function JobDetails() {
         )}
       </div>
 
+      {/* Error log */}
+      {job.errorLog && Object.keys(job.errorLog).length > 0 && (
+        <div className="card" style={{ marginBottom: 20, borderColor: 'var(--danger)' }}>
+          <div className="section-title" style={{ color: 'var(--danger)', marginBottom: 8 }}>
+            Log de errores
+          </div>
+          <pre
+            style={{
+              fontSize: 12,
+              color: 'var(--text-secondary)',
+              overflowX: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              maxHeight: 200,
+              overflowY: 'auto',
+            }}
+          >
+            {JSON.stringify(job.errorLog, null, 2)}
+          </pre>
+        </div>
+      )}
+
       {/* Results */}
-      {records.length > 0 && (
+      {(records.length > 0 || resultFilter !== 'all' || (isDedup && job.status === 'DONE')) && (
         <div>
-          <div className="section-title">Resultados ({recordTotal.toLocaleString()} registros)</div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+            }}
+          >
+            <div className="section-title" style={{ margin: 0 }}>
+              Resultados ({recordTotal.toLocaleString()} registros)
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['all', 'valid', 'invalid', 'duplicate'] as ResultFilter[]).map((f) => (
+                <button
+                  key={f}
+                  className={`page-btn${resultFilter === f ? ' active' : ''}`}
+                  onClick={() => {
+                    setResultFilter(f);
+                    setRecordPage(1);
+                  }}
+                  style={{ fontSize: 11, padding: '4px 10px' }}
+                >
+                  {f === 'all'
+                    ? 'Todos'
+                    : f === 'valid'
+                      ? '✓ Válidos'
+                      : f === 'invalid'
+                        ? '✗ Inválidos'
+                        : '⊕ Duplicados'}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="card" style={{ padding: 0 }}>
             <div className="results-table-wrap">
               <table className="results-table">
@@ -277,10 +416,16 @@ export default function JobDetails() {
         </div>
       )}
 
-      {job.status === 'DONE' && records.length === 0 && (
+      {job.status === 'DONE' && records.length === 0 && resultFilter === 'all' && (
         <div className="empty-state">
           <div className="empty-state-icon">📋</div>
           <div>No se encontraron registros para este trabajo</div>
+        </div>
+      )}
+      {records.length === 0 && resultFilter !== 'all' && (
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <div>Sin resultados para el filtro seleccionado</div>
         </div>
       )}
     </div>
