@@ -42,6 +42,17 @@ export class JobsRepository {
     return { jobs, total };
   }
 
+  async findActiveByFileId(fileId: string) {
+    return prisma.job.findFirst({
+      where: {
+        inputFileId: fileId,
+        type: JobType.IMPORT,
+        status: { in: [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.DONE] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async updateStatus(
     id: string,
     status: JobStatus,

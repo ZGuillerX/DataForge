@@ -1,5 +1,5 @@
-import { prisma } from "../../../config/database";
-import { FileType } from "@prisma/client";
+import { prisma } from '../../../config/database';
+import { FileType } from '@prisma/client';
 
 export class FilesRepository {
   async create(data: {
@@ -20,7 +20,13 @@ export class FilesRepository {
   async findByUserId(userId: string) {
     return prisma.file.findMany({
       where: { userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findByUserIdAndFilename(userId: string, filename: string) {
+    return prisma.file.findFirst({
+      where: { userId, filename, type: 'IMPORT' },
     });
   }
 

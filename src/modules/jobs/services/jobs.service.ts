@@ -1,17 +1,14 @@
-import { JobsRepository } from "../repositories/jobs.repository";
-import { FilesRepository } from "../../files/repositories/files.repository";
-import { jobsQueue } from "../queues/jobs.queue";
-import {
-  NotFoundError,
-  ForbiddenError,
-} from "../../../shared/errors/app-error";
-import { JobType } from "@prisma/client";
+import { JobsRepository } from '../repositories/jobs.repository';
+import { FilesRepository } from '../../files/repositories/files.repository';
+import { jobsQueue } from '../queues/jobs.queue';
+import { NotFoundError, ForbiddenError, ConflictError } from '../../../shared/errors/app-error';
+import { JobType } from '@prisma/client';
 import type {
   CreateImportJobDto,
   CreateExportJobDto,
   CreateDedupJobDto,
-} from "../dto/create-job.dto";
-import { PAGINATION } from "../../../shared/constants/pagination";
+} from '../dto/create-job.dto';
+import { PAGINATION } from '../../../shared/constants/pagination';
 
 export class JobsService {
   private jobsRepo: JobsRepository;
@@ -24,8 +21,16 @@ export class JobsService {
 
   async createImportJob(userId: string, dto: CreateImportJobDto) {
     const file = await this.filesRepo.findById(dto.fileId);
-    if (!file) throw new NotFoundError("File");
+    if (!file) throw new NotFoundError('File');
     if (file.userId !== userId) throw new ForbiddenError();
+
+    // Evitar importar el mismo archivo si ya hay un job activo o completado
+    const existing = await this.jobsRepo.findActiveByFileId(dto.fileId);
+    if (existing) {
+      throw new ConflictError(
+        `Este archivo ya fue importado (job ${existing.id.slice(0, 8)}… — estado: ${existing.status})`,
+      );
+    }
 
     const job = await this.jobsRepo.create({
       userId,
@@ -46,10 +51,7 @@ export class JobsService {
     const job = await this.jobsRepo.create({
       userId,
       type: JobType.EXPORT,
-      filters: { ...dto.filters, format: dto.format } as Record<
-        string,
-        unknown
-      >,
+      filters: { ...dto.filters, format: dto.format } as Record<string, unknown>,
     });
 
     await jobsQueue.add(
@@ -63,7 +65,7 @@ export class JobsService {
 
   async createDedupJob(userId: string, dto: CreateDedupJobDto) {
     const sourceJob = await this.jobsRepo.findById(dto.jobId);
-    if (!sourceJob) throw new NotFoundError("Job");
+    if (!sourceJob) throw new NotFoundError('Job');
     if (sourceJob.userId !== userId) throw new ForbiddenError();
 
     const job = await this.jobsRepo.create({
@@ -88,16 +90,12 @@ export class JobsService {
 
   async getJob(jobId: string, userId: string) {
     const job = await this.jobsRepo.findById(jobId);
-    if (!job) throw new NotFoundError("Job");
+    if (!job) throw new NotFoundError('Job');
     if (job.userId !== userId) throw new ForbiddenError();
     return job;
   }
 
-  async listJobs(
-    userId: string,
-    page = PAGINATION.DEFAULT_PAGE,
-    limit = PAGINATION.DEFAULT_LIMIT,
-  ) {
+  async listJobs(userId: string, page = PAGINATION.DEFAULT_PAGE, limit = PAGINATION.DEFAULT_LIMIT) {
     const safeLimit = Math.min(limit, PAGINATION.MAX_LIMIT);
     return this.jobsRepo.findByUserId(userId, page, safeLimit);
   }

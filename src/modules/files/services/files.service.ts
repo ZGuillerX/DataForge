@@ -1,12 +1,9 @@
-import fs from "fs";
-import path from "path";
-import { FilesRepository } from "../repositories/files.repository";
-import {
-  NotFoundError,
-  ForbiddenError,
-} from "../../../shared/errors/app-error";
-import { FileType } from "@prisma/client";
-import { isSupportedImportFormat } from "../../../shared/utils/file.util";
+import fs from 'fs';
+import path from 'path';
+import { FilesRepository } from '../repositories/files.repository';
+import { NotFoundError, ForbiddenError, ConflictError } from '../../../shared/errors/app-error';
+import { FileType } from '@prisma/client';
+import { isSupportedImportFormat } from '../../../shared/utils/file.util';
 
 export class FilesService {
   private filesRepo: FilesRepository;
@@ -21,7 +18,17 @@ export class FilesService {
     type: FileType = FileType.IMPORT,
   ) {
     if (!isSupportedImportFormat(file.originalname)) {
-      throw new Error("Unsupported file format");
+      throw new Error('Unsupported file format');
+    }
+
+    // Evitar subir el mismo archivo dos veces
+    const existing = await this.filesRepo.findByUserIdAndFilename(userId, file.originalname);
+    if (existing) {
+      // Eliminar el archivo temporal que multer ya guardó
+      fs.unlink(file.path, () => {});
+      throw new ConflictError(
+        `Ya existe un archivo con el nombre "${file.originalname}". Renómbralo antes de subirlo.`,
+      );
     }
 
     return this.filesRepo.create({
@@ -36,7 +43,7 @@ export class FilesService {
 
   async getFile(fileId: string, userId: string) {
     const file = await this.filesRepo.findById(fileId);
-    if (!file) throw new NotFoundError("File");
+    if (!file) throw new NotFoundError('File');
     if (file.userId !== userId) throw new ForbiddenError();
     return file;
   }
@@ -48,7 +55,7 @@ export class FilesService {
   async getDownloadStream(fileId: string, userId: string) {
     const file = await this.getFile(fileId, userId);
     if (!fs.existsSync(file.path)) {
-      throw new NotFoundError("File on disk");
+      throw new NotFoundError('File on disk');
     }
     return { stream: fs.createReadStream(file.path), file };
   }
