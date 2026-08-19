@@ -13,6 +13,18 @@ const TYPE_LABEL: Record<string, string> = {
   EXPORT: 'Exportación',
 };
 
+function formatDuration(startedAt: string, completedAt: string | null): string {
+  const start = new Date(startedAt).getTime();
+  const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+  const totalSeconds = Math.max(0, Math.floor((end - start) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -284,6 +296,15 @@ export default function JobDetails() {
             {new Date(job.createdAt).toLocaleString()}
           </div>
         </div>
+        {job.startedAt && (
+          <div className="job-meta-item">
+            <div className="job-meta-key">Duración</div>
+            <div className="job-meta-val" style={{ fontSize: 13 }}>
+              {formatDuration(job.startedAt, job.completedAt)}
+              {!job.completedAt && ' (en curso)'}
+            </div>
+          </div>
+        )}
         {job.completedAt && (
           <div className="job-meta-item">
             <div className="job-meta-key">Completado</div>
