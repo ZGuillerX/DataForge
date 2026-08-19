@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import '../styles/layout.css';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -22,11 +21,15 @@ export default function Layout({ children }: LayoutProps) {
     'DataForge';
 
   return (
-    <div className="app-layout">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <div className="main-content">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Navbar title={title} />
-        <main className="page-content">{children}</main>
+        <main className="flex-1 overflow-y-auto p-gutter md:p-xl">
+          <div className="mx-auto flex w-full max-w-container-max flex-col gap-lg">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
