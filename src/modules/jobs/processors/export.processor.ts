@@ -6,6 +6,7 @@ import { RecordsRepository } from "../../records/repositories/records.repository
 import { FilesRepository } from "../../files/repositories/files.repository";
 import { createJobLogger } from "../../../shared/utils/logger.util";
 import { storageConfig } from "../../../config/storage";
+import { storageDriver } from "../../files/storage/storage.factory";
 import { JobStatus, FileType } from "@prisma/client";
 import { prisma } from "../../../config/database";
 
@@ -49,28 +50,30 @@ export async function runExportProcessor(
 
     const exportsDir = path.join(storageConfig.localPath, "exports");
     const filename = `export_${jobId}.${format}`;
-    const filePath = path.join(exportsDir, filename);
+    const tempFilePath = path.join(exportsDir, filename);
+    const mimeType = format === "json" ? "application/json" : "text/csv";
 
     if (format === "json") {
       const jsonData = records.map((r) => r.data);
-      fs.writeFileSync(filePath, JSON.stringify(jsonData, null, 2), "utf-8");
+      fs.writeFileSync(tempFilePath, JSON.stringify(jsonData, null, 2), "utf-8");
     } else {
       const rows = records.map((r) => r.data as Record<string, unknown>);
       if (rows.length === 0) {
-        fs.writeFileSync(filePath, "", "utf-8");
+        fs.writeFileSync(tempFilePath, "", "utf-8");
       } else {
         const csv = stringify(rows, { header: true });
-        fs.writeFileSync(filePath, csv, "utf-8");
+        fs.writeFileSync(tempFilePath, csv, "utf-8");
       }
     }
 
-    const stat = fs.statSync(filePath);
+    const stat = fs.statSync(tempFilePath);
+    const location = await storageDriver.persist(tempFilePath, `exports/${filename}`, mimeType);
     const outputFile = await filesRepo.create({
       userId,
       filename,
-      path: filePath,
+      path: location,
       size: stat.size,
-      mimeType: format === "json" ? "application/json" : "text/csv",
+      mimeType,
       type: FileType.EXPORT,
     });
 

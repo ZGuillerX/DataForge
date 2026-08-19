@@ -1,9 +1,9 @@
 import fs from 'fs';
-import path from 'path';
 import { FilesRepository } from '../repositories/files.repository';
 import { NotFoundError, ForbiddenError, ConflictError } from '../../../shared/errors/app-error';
 import { FileType } from '@prisma/client';
 import { isSupportedImportFormat } from '../../../shared/utils/file.util';
+import { storageDriver } from '../storage/storage.factory';
 
 export class FilesService {
   private filesRepo: FilesRepository;
@@ -31,10 +31,13 @@ export class FilesService {
       );
     }
 
+    const key = `uploads/${file.filename}`;
+    const location = await storageDriver.persist(file.path, key, file.mimetype);
+
     return this.filesRepo.create({
       userId,
       filename: file.originalname,
-      path: file.path,
+      path: location,
       size: file.size,
       mimeType: file.mimetype,
       type,
@@ -54,9 +57,9 @@ export class FilesService {
 
   async getDownloadStream(fileId: string, userId: string) {
     const file = await this.getFile(fileId, userId);
-    if (!fs.existsSync(file.path)) {
+    if (!(await storageDriver.exists(file.path))) {
       throw new NotFoundError('File on disk');
     }
-    return { stream: fs.createReadStream(file.path), file };
+    return { stream: await storageDriver.getReadStream(file.path), file };
   }
 }
