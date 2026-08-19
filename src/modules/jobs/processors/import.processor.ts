@@ -1,13 +1,13 @@
-import fs from "fs";
-import path from "path";
-import csvParser from "csv-parser";
-import ExcelJS from "exceljs";
-import { JobsRepository } from "../repositories/jobs.repository";
-import { RecordsRepository } from "../../records/repositories/records.repository";
-import { processInChunks } from "../../../shared/utils/chunk.util";
-import { createJobLogger } from "../../../shared/utils/logger.util";
-import { CHUNK_SIZE } from "../../../shared/constants/job.constants";
-import { JobStatus } from "@prisma/client";
+import fs from 'fs';
+import path from 'path';
+import csvParser from 'csv-parser';
+import ExcelJS from 'exceljs';
+import { JobsRepository } from '../repositories/jobs.repository';
+import { RecordsRepository } from '../../records/repositories/records.repository';
+import { processInChunks } from '../../../shared/utils/chunk.util';
+import { createJobLogger } from '../../../shared/utils/logger.util';
+import { CHUNK_SIZE } from '../../../shared/constants/job.constants';
+import { JobStatus } from '@prisma/client';
 
 const jobsRepo = new JobsRepository();
 const recordsRepo = new RecordsRepository();
@@ -18,9 +18,47 @@ interface RawRow {
 
 function validateRow(row: RawRow): { isValid: boolean; errorMessage?: string } {
   if (Object.keys(row).length === 0) {
-    return { isValid: false, errorMessage: "Empty row" };
+    return { isValid: false, errorMessage: 'Empty row' };
   }
-  // Aquí se pueden agregar más reglas de validación
+
+  // Validar email si existe la columna
+  const emailFields = ['email', 'Email', 'EMAIL', 'correo', 'mail'];
+  for (const field of emailFields) {
+    const val = row[field];
+    if (val !== undefined && val !== null && val !== '') {
+      const str = String(val).trim();
+      if (!str.includes('@') || str.indexOf('.') <= str.indexOf('@')) {
+        return { isValid: false, errorMessage: `Invalid email: ${str}` };
+      }
+    }
+  }
+
+  // Validar teléfono si existe la columna
+  const phoneFields = ['phone', 'Phone', 'PHONE', 'telefono', 'tel', 'mobile'];
+  for (const field of phoneFields) {
+    const val = row[field];
+    if (val !== undefined && val !== null && val !== '') {
+      const normalized = String(val).replace(/[\s\-\(\)\+\.]/g, '');
+      if (!/^\d+$/.test(normalized) || normalized.length < 7) {
+        return {
+          isValid: false,
+          errorMessage: `Invalid phone: ${row[field]}`,
+        };
+      }
+    }
+  }
+
+  // Validar campos numéricos comunes
+  const numberFields = ['age', 'Age', 'AGE', 'edad', 'amount', 'quantity'];
+  for (const field of numberFields) {
+    const val = row[field];
+    if (val !== undefined && val !== null && val !== '') {
+      if (isNaN(Number(val))) {
+        return { isValid: false, errorMessage: `Invalid number in ${field}: ${val}` };
+      }
+    }
+  }
+
   return { isValid: true };
 }
 
@@ -29,9 +67,9 @@ async function parseCSV(filePath: string): Promise<RawRow[]> {
     const rows: RawRow[] = [];
     fs.createReadStream(filePath)
       .pipe(csvParser())
-      .on("data", (row: RawRow) => rows.push(row))
-      .on("end", () => resolve(rows))
-      .on("error", reject);
+      .on('data', (row: RawRow) => rows.push(row))
+      .on('end', () => resolve(rows))
+      .on('error', reject);
   });
 }
 
@@ -57,26 +95,23 @@ async function parseExcel(filePath: string): Promise<RawRow[]> {
   return rows;
 }
 
-export async function runImportProcessor(
-  jobId: string,
-  fileId: string,
-): Promise<void> {
+export async function runImportProcessor(jobId: string, fileId: string): Promise<void> {
   const log = createJobLogger(jobId);
 
   await jobsRepo.updateStatus(jobId, JobStatus.RUNNING, {
     startedAt: new Date(),
   });
-  log.info("Import job started");
+  log.info('Import job started');
 
   try {
-    const { prisma } = await import("../../../config/database");
+    const { prisma } = await import('../../../config/database');
     const file = await prisma.file.findUnique({ where: { id: fileId } });
     if (!file) throw new Error(`File ${fileId} not found`);
 
     const ext = path.extname(file.filename).toLowerCase();
     let rows: RawRow[];
 
-    if (ext === ".csv") {
+    if (ext === '.csv') {
       rows = await parseCSV(file.path);
     } else {
       rows = await parseExcel(file.path);
@@ -104,18 +139,16 @@ export async function runImportProcessor(
       const failed = mapped.filter((r) => !r.isValid).length;
       await jobsRepo.incrementProgress(jobId, processed, failed);
 
-      log.info(
-        `Chunk processed: offset=${offset}, processed=${processed}, failed=${failed}`,
-      );
+      log.info(`Chunk processed: offset=${offset}, processed=${processed}, failed=${failed}`);
     });
 
     await jobsRepo.updateStatus(jobId, JobStatus.DONE, {
       completedAt: new Date(),
     });
-    log.info("Import job completed");
+    log.info('Import job completed');
   } catch (error) {
     const err = error as Error;
-    log.error("Import job failed", { error: err.message });
+    log.error('Import job failed', { error: err.message });
     await jobsRepo.updateStatus(jobId, JobStatus.FAILED, {
       errorLog: { message: err.message },
       completedAt: new Date(),
