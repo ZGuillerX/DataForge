@@ -165,7 +165,11 @@ export const openapiSpec = {
                 required: ['email', 'password'],
                 properties: {
                   email: { type: 'string', format: 'email' },
-                  password: { type: 'string', minLength: 8 },
+                  password: {
+                    type: 'string',
+                    minLength: 8,
+                    description: '8+ caracteres, mayuscula, minuscula y numero o simbolo',
+                  },
                   name: { type: 'string' },
                 },
               },
@@ -227,6 +231,61 @@ export const openapiSpec = {
             },
           },
           '401': { $ref: '#/components/responses/Unauthorized' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/auth/forgot-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Solicitar recuperacion de contrasena',
+        description:
+          'Siempre responde 200 exista o no el email (evita filtrar que correos estan registrados). No hay servicio de email configurado: fuera de produccion la respuesta incluye devToken para poder probar el flujo.',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email'],
+                properties: { email: { type: 'string', format: 'email' } },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Instrucciones enviadas (o simuladas en dev)' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/auth/reset-password': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Completar recuperacion de contrasena con el token',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['token', 'password'],
+                properties: {
+                  token: { type: 'string' },
+                  password: {
+                    type: 'string',
+                    description: '8+ caracteres, mayuscula, minuscula y numero o simbolo',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Contrasena actualizada' },
+          '401': { description: 'Token invalido o expirado' },
           '422': { $ref: '#/components/responses/ValidationError' },
         },
       },
