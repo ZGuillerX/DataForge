@@ -6,7 +6,7 @@ import Dashboard from '../pages/Dashboard';
 import Jobs from '../pages/Jobs';
 import Files from '../pages/Files';
 import JobDetails from '../pages/JobDetails';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();

@@ -1,4 +1,4 @@
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, type DragEvent, type ChangeEvent } from 'react';
 import { filesApi, type UploadedFile } from '../api/files.api';
 import '../styles/auth.css';
 
