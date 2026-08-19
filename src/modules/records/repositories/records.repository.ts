@@ -47,13 +47,28 @@ export class RecordsRepository {
     });
   }
 
-  async countValidByJobId(jobId: string) {
-    return prisma.record.count({ where: { jobId, isValid: true } });
+  async countValidByJobId(jobId: string, filters?: { isValid?: boolean; isDuplicate?: boolean }) {
+    const where: import('@prisma/client').Prisma.RecordWhereInput = {
+      jobId,
+      isValid: filters?.isValid ?? true,
+    };
+    if (filters?.isDuplicate !== undefined) where.isDuplicate = filters.isDuplicate;
+    return prisma.record.count({ where });
   }
 
-  async findValidByJobIdPage(jobId: string, skip: number, take: number) {
+  async findValidByJobIdPage(
+    jobId: string,
+    skip: number,
+    take: number,
+    filters?: { isValid?: boolean; isDuplicate?: boolean },
+  ) {
+    const where: import('@prisma/client').Prisma.RecordWhereInput = {
+      jobId,
+      isValid: filters?.isValid ?? true,
+    };
+    if (filters?.isDuplicate !== undefined) where.isDuplicate = filters.isDuplicate;
     return prisma.record.findMany({
-      where: { jobId, isValid: true },
+      where,
       orderBy: { rowIndex: 'asc' },
       skip,
       take,

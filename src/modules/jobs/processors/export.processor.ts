@@ -61,9 +61,13 @@ export async function runExportProcessor(
       | 'json';
 
     const sourceJobId = (filters?.['jobId'] as string | undefined) ?? undefined;
+    const recordFilters = {
+      isValid: filters?.['isValid'] as boolean | undefined,
+      isDuplicate: filters?.['isDuplicate'] as boolean | undefined,
+    };
 
     const totalAvailable = sourceJobId
-      ? await recordsRepo.countValidByJobId(sourceJobId)
+      ? await recordsRepo.countValidByJobId(sourceJobId, recordFilters)
       : await recordsRepo.countByUserId(userId);
     const totalRows = Math.min(totalAvailable, env.MAX_ROWS_PER_JOB);
     await jobsRepo.updateStatus(jobId, JobStatus.RUNNING, { totalRows });
@@ -82,7 +86,7 @@ export async function runExportProcessor(
     for (let skip = 0; skip < totalRows; skip += CHUNK_SIZE) {
       const take = Math.min(CHUNK_SIZE, totalRows - skip);
       const page = sourceJobId
-        ? await recordsRepo.findValidByJobIdPage(sourceJobId, skip, take)
+        ? await recordsRepo.findValidByJobIdPage(sourceJobId, skip, take, recordFilters)
         : await recordsRepo.findByUserIdPage(userId, skip, take);
       if (page.length === 0) break;
 
