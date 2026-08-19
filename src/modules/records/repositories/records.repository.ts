@@ -1,4 +1,4 @@
-import { prisma } from "../../../config/database";
+import { prisma } from '../../../config/database';
 
 export class RecordsRepository {
   async bulkCreate(
@@ -13,21 +13,29 @@ export class RecordsRepository {
     return prisma.record.createMany({
       data: records.map((r) => ({
         ...r,
-        data: r.data as import("@prisma/client").Prisma.InputJsonValue,
+        data: r.data as import('@prisma/client').Prisma.InputJsonValue,
       })),
     });
   }
 
-  async findByJobId(jobId: string, page: number, limit: number) {
+  async findByJobId(
+    jobId: string,
+    page: number,
+    limit: number,
+    filters?: { isValid?: boolean; isDuplicate?: boolean },
+  ) {
     const skip = (page - 1) * limit;
+    const where: import('@prisma/client').Prisma.RecordWhereInput = { jobId };
+    if (filters?.isValid !== undefined) where.isValid = filters.isValid;
+    if (filters?.isDuplicate !== undefined) where.isDuplicate = filters.isDuplicate;
     const [records, total] = await Promise.all([
       prisma.record.findMany({
-        where: { jobId },
+        where,
         skip,
         take: limit,
-        orderBy: { rowIndex: "asc" },
+        orderBy: { rowIndex: 'asc' },
       }),
-      prisma.record.count({ where: { jobId } }),
+      prisma.record.count({ where }),
     ]);
     return { records, total };
   }
@@ -35,7 +43,7 @@ export class RecordsRepository {
   async findValidByJobId(jobId: string) {
     return prisma.record.findMany({
       where: { jobId, isValid: true },
-      orderBy: { rowIndex: "asc" },
+      orderBy: { rowIndex: 'asc' },
     });
   }
 

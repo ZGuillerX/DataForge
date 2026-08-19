@@ -48,15 +48,41 @@ export class JobsController {
   }
 
   async getJobResults(req: AuthenticatedRequest, res: Response): Promise<void> {
-    await jobsService.getJob(req.params.id, req.user.sub); // verifica ownership
+    const job = await jobsService.getJob(req.params.id, req.user.sub); // verifica ownership
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 50;
-    const result = await recordsRepo.findByJobId(req.params.id, page, limit);
+
+    // Filtros opcionales desde query params
+    const filters: { isValid?: boolean; isDuplicate?: boolean } = {};
+    if (req.query.isValid === 'true') filters.isValid = true;
+    if (req.query.isValid === 'false') filters.isValid = false;
+    if (req.query.isDuplicate === 'true') filters.isDuplicate = true;
+
+    // Para jobs DEDUP: los records pertenecen al job fuente
+    let queryJobId = req.params.id;
+    if (job.type === 'DEDUP') {
+      const jobFilters = job.filters as Record<string, unknown> | null;
+      const sourceJobId = jobFilters?.sourceJobId as string | undefined;
+      if (sourceJobId) {
+        queryJobId = sourceJobId;
+        // Si no hay filtro explícito de isDuplicate, mostrar solo duplicados por defecto
+        if (req.query.isDuplicate === undefined && req.query.isValid === undefined) {
+          filters.isDuplicate = true;
+        }
+      }
+    }
+
+    const result = await recordsRepo.findByJobId(queryJobId, page, limit, filters);
     res.json({
       success: true,
       data: result.records,
       meta: { total: result.total, page, limit },
     });
+  }
+
+  async retryJob(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const job = await jobsService.retryJob(req.params.id, req.user.sub);
+    res.json({ success: true, data: job });
   }
 
   async streamJobEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
