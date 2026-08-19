@@ -12,6 +12,7 @@ import { authRouter } from './modules/auth/auth.module';
 import { usersRouter } from './modules/users/users.module';
 import { filesRouter } from './modules/files/files.module';
 import { jobsRouter } from './modules/jobs/jobs.module';
+import { foldersRouter } from './modules/folders/folders.module';
 import { openapiSpec } from './config/openapi';
 
 export function createApp() {
@@ -63,6 +64,7 @@ export function createApp() {
   app.use('/api/v1/users', usersRouter);
   app.use('/api/v1/files', filesRouter);
   app.use('/api/v1/jobs', jobsRouter);
+  app.use('/api/v1/folders', foldersRouter);
 
   // 404
   app.use((_req, res) => {

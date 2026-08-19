@@ -21,5 +21,8 @@ router.get('/:id', (req, res, next) =>
 router.get('/:id/download', (req, res, next) =>
   controller.download(req as unknown as AuthenticatedRequest, res).catch(next),
 );
+router.patch('/:id', (req, res, next) =>
+  controller.move(req as unknown as AuthenticatedRequest, res).catch(next),
+);
 
 export { router as filesRouter };

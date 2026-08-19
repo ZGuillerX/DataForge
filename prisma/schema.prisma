@@ -20,15 +20,31 @@ model User {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  files File[]
-  jobs  Job[]
+  files   File[]
+  jobs    Job[]
+  folders Folder[]
 
   @@map("users")
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files File[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("folders")
 }
 
 model File {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
+  folderId  String?  @map("folder_id")
   filename  String
   path      String
   size      Int
@@ -36,12 +52,14 @@ model File {
   type      FileType
   createdAt DateTime @default(now()) @map("created_at")
 
-  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  inputJobs  Job[] @relation("JobInputFile")
-  outputJobs Job[] @relation("JobOutputFile")
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder     Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  inputJobs  Job[]   @relation("JobInputFile")
+  outputJobs Job[]   @relation("JobOutputFile")
 
   @@index([userId])
   @@index([userId, type])
+  @@index([folderId])
   @@map("files")
 }
 

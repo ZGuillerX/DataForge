@@ -16,6 +16,7 @@ export const openapiSpec = {
     { name: 'Auth', description: 'Registro e inicio de sesion' },
     { name: 'Users', description: 'Perfil del usuario autenticado' },
     { name: 'Files', description: 'Subida, listado y descarga de archivos' },
+    { name: 'Folders', description: 'Carpetas para organizar archivos' },
     { name: 'Jobs', description: 'Jobs de importacion, exportacion y deduplicacion' },
   ],
   components: {
@@ -59,12 +60,26 @@ export const openapiSpec = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           userId: { type: 'string', format: 'uuid' },
+          folderId: { type: 'string', format: 'uuid', nullable: true },
           filename: { type: 'string' },
           path: { type: 'string', description: 'Ruta local o key de S3, segun STORAGE_DRIVER' },
           size: { type: 'integer' },
           mimeType: { type: 'string' },
           type: { type: 'string', enum: ['IMPORT', 'EXPORT'] },
           createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      Folder: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          createdAt: { type: 'string', format: 'date-time' },
+          _count: {
+            type: 'object',
+            properties: { files: { type: 'integer' } },
+          },
         },
       },
       Job: {
@@ -371,7 +386,14 @@ export const openapiSpec = {
             'multipart/form-data': {
               schema: {
                 type: 'object',
-                properties: { file: { type: 'string', format: 'binary' } },
+                properties: {
+                  file: { type: 'string', format: 'binary' },
+                  folderId: {
+                    type: 'string',
+                    format: 'uuid',
+                    description: 'Carpeta destino (opcional)',
+                  },
+                },
               },
             },
           },
@@ -403,6 +425,13 @@ export const openapiSpec = {
         parameters: [
           { $ref: '#/components/parameters/Page' },
           { $ref: '#/components/parameters/Limit' },
+          {
+            name: 'folderId',
+            in: 'query',
+            schema: { type: 'string' },
+            description:
+              'UUID de una carpeta para filtrar, o "none" para solo archivos sin carpeta. Sin este parametro devuelve todos.',
+          },
         ],
         responses: {
           '200': {
@@ -440,6 +469,95 @@ export const openapiSpec = {
         ],
         responses: {
           '200': { description: 'OK' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+      patch: {
+        tags: ['Files'],
+        summary: 'Mover un archivo a otra carpeta (o quitarlo de la carpeta)',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['folderId'],
+                properties: {
+                  folderId: {
+                    type: 'string',
+                    format: 'uuid',
+                    nullable: true,
+                    description: 'null para quitar el archivo de cualquier carpeta',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Archivo movido' },
+          '403': { $ref: '#/components/responses/Forbidden' },
+          '404': { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/folders': {
+      get: {
+        tags: ['Folders'],
+        summary: 'Listar carpetas del usuario (con cantidad de archivos)',
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/Folder' } },
+                  },
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+        },
+      },
+      post: {
+        tags: ['Folders'],
+        summary: 'Crear una carpeta',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: { name: { type: 'string', maxLength: 60 } },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Carpeta creada' },
+          '409': { description: 'Ya existe una carpeta con ese nombre' },
+          '422': { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/folders/{id}': {
+      delete: {
+        tags: ['Folders'],
+        summary: 'Eliminar una carpeta (los archivos quedan sin carpeta, no se borran)',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Carpeta eliminada' },
           '403': { $ref: '#/components/responses/Forbidden' },
           '404': { $ref: '#/components/responses/NotFound' },
         },
