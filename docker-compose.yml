@@ -12,8 +12,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-change_this_in_production}
-      - STORAGE_DRIVER=local
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - STORAGE_LOCAL_PATH=/app/uploads
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME:-}
     volumes:
       - uploads:/app/uploads
       - logs:/app/logs
@@ -35,8 +39,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-change_this_in_production}
-      - STORAGE_DRIVER=local
+      - STORAGE_DRIVER=${STORAGE_DRIVER:-local}
       - STORAGE_LOCAL_PATH=/app/uploads
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME:-}
       - QUEUE_CONCURRENCY=5
     volumes:
       - uploads:/app/uploads
